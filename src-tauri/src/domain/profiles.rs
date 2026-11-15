@@ -16,6 +16,9 @@ pub struct LoomProfile {
     pub default_loom_waste_cm: f64,
     pub default_take_up_percent: f64,
     pub default_shrinkage_percent: f64,
+    /// Anzahl verfügbarer Litzen (Ösen) pro Schaft (bei Gatterkamm leer).
+    #[serde(default)]
+    pub heddles_per_shaft: Vec<usize>,
 }
 
 pub fn default_profiles() -> Vec<LoomProfile> {
@@ -29,6 +32,7 @@ pub fn default_profiles() -> Vec<LoomProfile> {
             default_loom_waste_cm: 50.0,
             default_take_up_percent: 10.0,
             default_shrinkage_percent: 10.0,
+            heddles_per_shaft: vec![],
         },
         LoomProfile {
             id: "ashford-sampleit-40".to_string(),
@@ -39,6 +43,21 @@ pub fn default_profiles() -> Vec<LoomProfile> {
             default_loom_waste_cm: 45.0,
             default_take_up_percent: 10.0,
             default_shrinkage_percent: 10.0,
+            heddles_per_shaft: vec![],
+        },
+        LoomProfile {
+            id: "ashford-table-4s-60".to_string(),
+            name: "Ashford Tischwebstuhl 60 cm (4 Schäfte)".to_string(),
+            loom_type: LoomType::ShaftLoom {
+                shafts: 4,
+                treadles: 4,
+            },
+            max_width_cm: 60.0,
+            default_ends_per_cm: 6.0,
+            default_loom_waste_cm: 60.0,
+            default_take_up_percent: 10.0,
+            default_shrinkage_percent: 10.0,
+            heddles_per_shaft: vec![100, 100, 100, 100],
         },
     ]
 }
@@ -110,7 +129,7 @@ mod tests {
     fn test_profile_crud_roundtrip() {
         let dir = temp_dir();
         let initial = load_profiles(&dir).expect("defaults should load");
-        assert_eq!(initial.len(), 2);
+        assert_eq!(initial.len(), 3);
 
         let custom = LoomProfile {
             id: "custom-1".to_string(),
@@ -121,14 +140,15 @@ mod tests {
             default_loom_waste_cm: 55.0,
             default_take_up_percent: 8.0,
             default_shrinkage_percent: 12.0,
+            heddles_per_shaft: vec![],
         };
 
         let after_add = upsert_profile(&dir, custom.clone()).expect("upsert should succeed");
-        assert_eq!(after_add.len(), 3);
+        assert_eq!(after_add.len(), 4);
         assert!(after_add.contains(&custom));
 
         let after_delete = delete_profile(&dir, "custom-1").expect("delete should succeed");
-        assert_eq!(after_delete.len(), 2);
+        assert_eq!(after_delete.len(), 3);
 
         let _ = fs::remove_dir_all(&dir);
     }

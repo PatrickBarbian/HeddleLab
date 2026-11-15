@@ -698,6 +698,119 @@ html, body {
   font-weight: 600;
 }
 
+/* Mode Switcher (Gatterkamm vs. Schaftwebstuhl) */
+.mode-switcher {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mode-btn {
+  border: none;
+  background: transparent;
+  color: #cfc6ba;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 7px 6px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mode-btn.active {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+/* Multi-Shaft UI Elements */
+.shaft-profile-inputs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.shaft-profile-inputs input {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.86rem;
+}
+
+.shaft-profile-inputs input[type="number"] {
+  width: 90px;
+}
+
+.shaft-profile-inputs input[type="text"] {
+  flex: 1;
+  min-width: 180px;
+}
+
+.heddle-summary-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.heddle-pill {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.heddle-pill.over-limit {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border-color: #fca5a5;
+}
+
+.shaft-toolbar {
+  margin-bottom: 12px;
+  padding: 10px 16px;
+  background: #fdf9f3;
+}
+
+.draft-matrix-canvas {
+  background: #ffffff;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.shaft-usage-box {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.shaft-usage-box h4 {
+  margin: 0 0 10px 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.color-total-row.over-limit {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border-color: #fca5a5;
+}
+
+.step-shafts {
+  font-size: 0.78rem;
+  color: var(--accent-dark);
+  background: var(--accent-soft);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
 .zoom-label {
   font-size: 0.84rem;
   font-weight: 600;

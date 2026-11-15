@@ -44,6 +44,7 @@ const state = {
   lastCalculation: null,
   profiles: [],
   activeProfileId: null,
+  loomMode: "RigidHeddle", // "RigidHeddle" | "ShaftLoom"
   threadingPlan: [],
   checkedSteps: new Set(),
 };
@@ -143,6 +144,39 @@ function renderCalculation(output) {
     t("calcPreview")
       .replace("{w}", output.totalWarpEnds)
       .replace("{h}", output.totalWeftPicks);
+
+  renderCalcHeddleSummary(output.totalWarpEnds);
+}
+
+function getActiveHeddlesPerShaft() {
+  const active = state.profiles.find((p) => p.id === state.activeProfileId);
+  const shafts = editor.draft.loomType.kind === "ShaftLoom" ? editor.draft.loomType.shafts : 2;
+  if (active?.heddlesPerShaft?.length) {
+    return Array.from({ length: shafts }, (_, i) => active.heddlesPerShaft[i] ?? active.heddlesPerShaft[0] ?? 100);
+  }
+  return Array.from({ length: shafts }, () => 100);
+}
+
+function renderCalcHeddleSummary(totalWarpEnds) {
+  const card = document.getElementById("calc-shaft-card");
+  const grid = document.getElementById("calc-heddle-summary");
+  if (state.loomMode !== "ShaftLoom") {
+    card.hidden = true;
+    return;
+  }
+  card.hidden = false;
+  const limits = getActiveHeddlesPerShaft();
+  const shafts = limits.length;
+  const perShaftApprox = Math.ceil(totalWarpEnds / shafts);
+
+  grid.innerHTML = "";
+  limits.forEach((limit, idx) => {
+    const over = perShaftApprox > limit;
+    const pill = document.createElement("span");
+    pill.className = `heddle-pill${over ? " over-limit" : ""}`;
+    pill.textContent = `Schaft ${idx + 1}: ~${perShaftApprox} / ${limit} Ösen`;
+    grid.appendChild(pill);
+  });
 }
 
 function renderError(message) {
@@ -185,6 +219,28 @@ function renderProfileSelect() {
   deleteBtn.disabled = state.profiles.length <= 1;
 }
 
+function setGlobalLoomMode(kind, shafts = 4, treadles = 4) {
+  state.loomMode = kind;
+  document.querySelectorAll(".mode-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.mode === kind);
+  });
+  document.getElementById("new-profile-shaft-fields").hidden = kind !== "ShaftLoom";
+  document.getElementById("threading-shaft-usage-box").hidden = kind !== "ShaftLoom";
+  editor.setLoomMode(kind, shafts, treadles);
+  if (state.lastCalculation) {
+    renderCalcHeddleSummary(state.lastCalculation.totalWarpEnds);
+  }
+  refreshThreadingPlan();
+}
+
+document.querySelectorAll(".mode-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const mode = btn.dataset.mode;
+    const shafts = Number(document.getElementById("editor-shaft-count").value) || 4;
+    setGlobalLoomMode(mode, shafts, shafts);
+  });
+});
+
 function applyProfile(profile) {
   if (!profile) return;
   state.activeProfileId = profile.id;
@@ -194,6 +250,12 @@ function applyProfile(profile) {
   inputs.shrinkagePercent.value = profile.defaultShrinkagePercent;
   sidebarLoomName.textContent = profile.name;
   renderProfileSelect();
+
+  if (profile.loomType?.kind === "ShaftLoom") {
+    setGlobalLoomMode("ShaftLoom", profile.loomType.shafts, profile.loomType.treadles);
+  } else {
+    setGlobalLoomMode("RigidHeddle");
+  }
   recalculate();
 }
 
@@ -237,15 +299,30 @@ document.getElementById("btn-confirm-save-profile").addEventListener("click", as
     return;
   }
 
+  const isShaft = state.loomMode === "ShaftLoom";
+  const shafts = Number(document.getElementById("new-profile-shafts").value) || 4;
+  const treadles = Number(document.getElementById("new-profile-treadles").value) || 4;
+  const heddlesRaw = document.getElementById("new-profile-heddles").value;
+  const parsedHeddles = isShaft
+    ? heddlesRaw
+        .split(",")
+        .map((v) => Math.max(1, Number(v.trim()) || 100))
+        .slice(0, shafts)
+    : [];
+  while (isShaft && parsedHeddles.length < shafts) {
+    parsedHeddles.push(parsedHeddles[0] ?? 100);
+  }
+
   const newProfile = {
     id: `profile-${Date.now()}`,
     name,
-    loomType: { kind: "RigidHeddle" },
+    loomType: isShaft ? { kind: "ShaftLoom", shafts, treadles } : { kind: "RigidHeddle" },
     maxWidthCm,
     defaultEndsPerCm: Number(inputs.endsPerCm.value) || 4,
     defaultLoomWasteCm: Number(inputs.loomWasteCm.value) || 50,
     defaultTakeUpPercent: Number(inputs.takeUpPercent.value) || 10,
     defaultShrinkagePercent: Number(inputs.shrinkagePercent.value) || 10,
+    heddlesPerShaft: parsedHeddles,
   };
 
   try {
@@ -319,6 +396,32 @@ function renderThreadingPlan() {
     totalsEl.appendChild(row);
   });
 
+  // Belegte Litzen (Ösen) pro Schaft
+  const shaftBox = document.getElementById("threading-shaft-usage-box");
+  const shaftListEl = document.getElementById("threading-shaft-usage");
+  if (state.loomMode === "ShaftLoom") {
+    shaftBox.hidden = false;
+    const limits = getActiveHeddlesPerShaft();
+    const counts = new Array(limits.length).fill(0);
+    editor.draft.threading.forEach((s) => {
+      if (s >= 0 && s < counts.length) counts[s]++;
+    });
+    shaftListEl.innerHTML = "";
+    counts.forEach((used, idx) => {
+      const limit = limits[idx];
+      const over = used > limit;
+      const row = document.createElement("div");
+      row.className = `color-total-row${over ? " over-limit" : ""}`;
+      row.innerHTML = `
+        <span>Schaft ${idx + 1}</span>
+        <strong>${used} / ${limit} Ösen${over ? " !" : ""}</strong>
+      `;
+      shaftListEl.appendChild(row);
+    });
+  } else {
+    shaftBox.hidden = true;
+  }
+
   // Schritt-für-Schritt-Liste
   const listEl = document.getElementById("threading-steps-list");
   listEl.innerHTML = "";
@@ -326,6 +429,10 @@ function renderThreadingPlan() {
   plan.forEach((step, idx) => {
     const li = document.createElement("li");
     const isDone = state.checkedSteps.has(idx);
+    const shaftBadge =
+      state.loomMode === "ShaftLoom" && step.shafts?.length
+        ? `<span class="step-shafts">Schäfte: ${step.shafts.slice(0, 8).join("·")}${step.shafts.length > 8 ? "…" : ""}</span>`
+        : "";
     li.className = `threading-step-item${isDone ? " done" : ""}`;
     li.innerHTML = `
       <span class="step-left">
@@ -333,6 +440,7 @@ function renderThreadingPlan() {
         <span class="step-number">#${idx + 1}</span>
         <span class="color-dot" style="background:${step.color}"></span>
         <strong>${step.count}× ${formatColorLabel(step.color)}</strong>
+        ${shaftBadge}
       </span>
       <span class="step-range">${step.startThread}–${step.endThread}</span>
     `;
@@ -396,7 +504,7 @@ loadProfiles().then(() => {
 });
 
 // --- GitHub Update Checker ---
-const APP_VERSION = "0.2.1";
+const APP_VERSION = "0.3.0";
 const updateBtn = document.getElementById("btn-check-updates");
 const updateStatusEl = document.getElementById("update-status");
 

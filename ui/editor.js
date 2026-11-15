@@ -44,6 +44,13 @@ export class WeavingEditor {
     this.warpCanvas = document.getElementById("warp-axis-canvas");
     this.drawdownCanvas = document.getElementById("drawdown-canvas");
     this.weftCanvas = document.getElementById("weft-axis-canvas");
+    this.threadingCanvas = document.getElementById("threading-canvas");
+    this.tieupCanvas = document.getElementById("tieup-canvas");
+    this.treadlingCanvas = document.getElementById("treadling-canvas");
+    this.shaftToolbarEl = document.getElementById("shaft-toolbar");
+    this.threadingRowEl = document.getElementById("cad-threading-row");
+    this.shaftCountSelectEl = document.getElementById("editor-shaft-count");
+    this.cornerBadgeEl = document.getElementById("cad-corner-badge");
 
     this.initPalette();
     this.renderYarnProfiles();
@@ -258,6 +265,147 @@ export class WeavingEditor {
         }`;
       }
     });
+
+    // Schaftwebstuhl: Einzug (Threading) klicken
+    this.threadingCanvas.addEventListener("pointerdown", (e) => {
+      if (this.draft.loomType.kind !== "ShaftLoom") return;
+      const rect = this.threadingCanvas.getBoundingClientRect();
+      const x = Math.floor((e.clientX - rect.left) / this.cellSize);
+      const row = Math.floor((e.clientY - rect.top) / this.cellSize);
+      const shafts = this.draft.loomType.shafts;
+      const shaft = shafts - 1 - row; // Schaft 1 unten, Schaft N oben
+      if (x >= 0 && x < this.draft.threading.length && shaft >= 0 && shaft < shafts) {
+        this.draft.threading[x] = shaft;
+        this.render();
+        this.notifyChange();
+      }
+    });
+
+    // Schaftwebstuhl: Schnürung (Tie-up) klicken
+    this.tieupCanvas.addEventListener("pointerdown", (e) => {
+      if (this.draft.loomType.kind !== "ShaftLoom") return;
+      const rect = this.tieupCanvas.getBoundingClientRect();
+      const treadle = Math.floor((e.clientX - rect.left) / this.cellSize);
+      const row = Math.floor((e.clientY - rect.top) / this.cellSize);
+      const shafts = this.draft.loomType.shafts;
+      const treadles = this.draft.loomType.treadles;
+      const shaft = shafts - 1 - row;
+      if (treadle >= 0 && treadle < treadles && shaft >= 0 && shaft < shafts) {
+        this.draft.tieUp[treadle][shaft] = !this.draft.tieUp[treadle][shaft];
+        this.render();
+        this.notifyChange();
+      }
+    });
+
+    // Schaftwebstuhl: Trittfolge (Treadling) klicken
+    this.treadlingCanvas.addEventListener("pointerdown", (e) => {
+      if (this.draft.loomType.kind !== "ShaftLoom") return;
+      const rect = this.treadlingCanvas.getBoundingClientRect();
+      const treadle = Math.floor((e.clientX - rect.left) / this.cellSize);
+      const y = Math.floor((e.clientY - rect.top) / this.cellSize);
+      const treadles = this.draft.loomType.treadles;
+      if (treadle >= 0 && treadle < treadles && y >= 0 && y < this.draft.treadling.length) {
+        this.draft.treadling[y] = treadle;
+        this.render();
+        this.notifyChange();
+      }
+    });
+
+    // Bindungs-Vorlagen & Schaftanzahl
+    document.querySelectorAll("[data-weave-preset]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        this.applyWeavePreset(btn.dataset.weavePreset);
+      });
+    });
+
+    this.shaftCountSelectEl.addEventListener("change", () => {
+      const n = Number(this.shaftCountSelectEl.value) || 4;
+      this.setLoomMode("ShaftLoom", n, n);
+    });
+  }
+
+  setLoomMode(kind, shafts = 4, treadles = 4) {
+    const isShaft = kind === "ShaftLoom";
+    this.shaftToolbarEl.hidden = !isShaft;
+    this.threadingRowEl.hidden = !isShaft;
+    this.treadlingCanvas.hidden = !isShaft;
+
+    if (!isShaft) {
+      this.draft.loomType = { kind: "RigidHeddle" };
+      this.draft.threading = this.draft.warpColors.map((_, x) => x % 2);
+      this.draft.treadling = this.draft.weftColors.map((_, y) => y % 2);
+      this.draft.tieUp = [
+        [true, false],
+        [false, true],
+      ];
+      this.cornerBadgeEl.textContent = "PW";
+      this.render();
+      this.notifyChange();
+      return;
+    }
+
+    this.draft.loomType = { kind: "ShaftLoom", shafts, treadles };
+    this.shaftCountSelectEl.value = String(shafts);
+    this.cornerBadgeEl.textContent = `${shafts}S`;
+    this.applyWeavePreset("twill22");
+  }
+
+  applyWeavePreset(preset) {
+    if (this.draft.loomType.kind !== "ShaftLoom") return;
+    const shafts = this.draft.loomType.shafts;
+    const treadles = this.draft.loomType.treadles;
+    const warpLen = this.draft.warpColors.length;
+    const weftLen = this.draft.weftColors.length;
+
+    const tieUp = Array.from({ length: treadles }, () =>
+      Array.from({ length: shafts }, () => false)
+    );
+
+    if (preset === "plain") {
+      this.draft.threading = Array.from({ length: warpLen }, (_, x) => x % 2);
+      this.draft.treadling = Array.from({ length: weftLen }, (_, y) => y % 2);
+      for (let t = 0; t < treadles; t++) {
+        for (let s = 0; s < shafts; s++) {
+          tieUp[t][s] = t % 2 === s % 2;
+        }
+      }
+    } else if (preset === "twill22") {
+      this.draft.threading = Array.from({ length: warpLen }, (_, x) => x % shafts);
+      this.draft.treadling = Array.from({ length: weftLen }, (_, y) => y % treadles);
+      for (let t = 0; t < treadles; t++) {
+        tieUp[t][t % shafts] = true;
+        tieUp[t][(t + 1) % shafts] = true;
+      }
+    } else if (preset === "herringbone") {
+      const period = Math.max(2, (shafts - 1) * 2);
+      this.draft.threading = Array.from({ length: warpLen }, (_, x) => {
+        const m = x % period;
+        return m < shafts ? m : period - m;
+      });
+      this.draft.treadling = Array.from({ length: weftLen }, (_, y) => y % treadles);
+      for (let t = 0; t < treadles; t++) {
+        tieUp[t][t % shafts] = true;
+        tieUp[t][(t + 1) % shafts] = true;
+      }
+    } else if (preset === "waffle") {
+      const period = Math.max(2, (shafts - 1) * 2);
+      this.draft.threading = Array.from({ length: warpLen }, (_, x) => {
+        const m = x % period;
+        return m < shafts ? m : period - m;
+      });
+      this.draft.treadling = Array.from({ length: weftLen }, (_, y) => {
+        const m = y % period;
+        return m < treadles ? m : period - m;
+      });
+      for (let t = 0; t < treadles; t++) {
+        tieUp[t][t % shafts] = true;
+        if (t % 2 === 0) tieUp[t][(t + 1) % shafts] = true;
+      }
+    }
+
+    this.draft.tieUp = tieUp;
+    this.render();
+    this.notifyChange();
   }
 
   setCellSize(size) {
@@ -290,8 +438,16 @@ export class WeavingEditor {
       { length: newWeftCount },
       (_, y) => oldWeftT[y] ?? oldWeftT[y % oldWeftT.length] ?? 1.0
     );
-    this.draft.threading = Array.from({ length: newWarpCount }, (_, x) => x % 2);
-    this.draft.treadling = Array.from({ length: newWeftCount }, (_, y) => y % 2);
+    const oldThreading = this.draft.threading;
+    const oldTreadling = this.draft.treadling;
+    this.draft.threading = Array.from(
+      { length: newWarpCount },
+      (_, x) => oldThreading[x] ?? oldThreading[x % oldThreading.length] ?? (x % 2)
+    );
+    this.draft.treadling = Array.from(
+      { length: newWeftCount },
+      (_, y) => oldTreadling[y] ?? oldTreadling[y % oldTreadling.length] ?? (y % 2)
+    );
 
     this.syncDimensionInputs();
     this.render();
@@ -428,6 +584,70 @@ export class WeavingEditor {
             dCtx.strokeRect(px + 0.5, py + weftOffset + 0.5, s - 1, Math.max(1, weftSpan - 1));
           }
         }
+      }
+    }
+
+    // 4. Schaftwebstuhl-Matrizen (Threading, Tie-up, Treadling)
+    if (this.draft.loomType.kind === "ShaftLoom") {
+      this.renderShaftMatrices(warpCount, weftCount, s);
+    }
+  }
+
+  renderShaftMatrices(warpCount, weftCount, s) {
+    const shafts = this.draft.loomType.shafts;
+    const treadles = this.draft.loomType.treadles;
+
+    // Threading [warpCount x shafts]
+    this.threadingCanvas.width = warpCount * s;
+    this.threadingCanvas.height = shafts * s;
+    const thCtx = this.threadingCanvas.getContext("2d");
+    thCtx.fillStyle = "#ffffff";
+    thCtx.fillRect(0, 0, warpCount * s, shafts * s);
+    for (let x = 0; x < warpCount; x++) {
+      for (let sh = 0; sh < shafts; sh++) {
+        const row = shafts - 1 - sh;
+        const active = this.draft.threading[x] === sh;
+        if (active) {
+          thCtx.fillStyle = "#b45309";
+          thCtx.fillRect(x * s + 2, row * s + 2, Math.max(2, s - 4), Math.max(2, s - 4));
+        }
+        thCtx.strokeStyle = "#ddd5c8";
+        thCtx.strokeRect(x * s + 0.5, row * s + 0.5, s - 1, s - 1);
+      }
+    }
+
+    // Tie-up [treadles x shafts]
+    this.tieupCanvas.width = treadles * s;
+    this.tieupCanvas.height = shafts * s;
+    const tuCtx = this.tieupCanvas.getContext("2d");
+    tuCtx.fillStyle = "#faf8f5";
+    tuCtx.fillRect(0, 0, treadles * s, shafts * s);
+    for (let t = 0; t < treadles; t++) {
+      for (let sh = 0; sh < shafts; sh++) {
+        const row = shafts - 1 - sh;
+        if (this.draft.tieUp[t]?.[sh]) {
+          tuCtx.fillStyle = "#26221e";
+          tuCtx.fillRect(t * s + 2, row * s + 2, Math.max(2, s - 4), Math.max(2, s - 4));
+        }
+        tuCtx.strokeStyle = "#ddd5c8";
+        tuCtx.strokeRect(t * s + 0.5, row * s + 0.5, s - 1, s - 1);
+      }
+    }
+
+    // Treadling [treadles x weftCount]
+    this.treadlingCanvas.width = treadles * s;
+    this.treadlingCanvas.height = weftCount * s;
+    const trCtx = this.treadlingCanvas.getContext("2d");
+    trCtx.fillStyle = "#ffffff";
+    trCtx.fillRect(0, 0, treadles * s, weftCount * s);
+    for (let y = 0; y < weftCount; y++) {
+      for (let t = 0; t < treadles; t++) {
+        if (this.draft.treadling[y] === t) {
+          trCtx.fillStyle = "#1e3a5f";
+          trCtx.fillRect(t * s + 2, y * s + 2, Math.max(2, s - 4), Math.max(2, s - 4));
+        }
+        trCtx.strokeStyle = "#ddd5c8";
+        trCtx.strokeRect(t * s + 0.5, y * s + 0.5, s - 1, s - 1);
       }
     }
   }

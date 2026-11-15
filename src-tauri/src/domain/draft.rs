@@ -20,6 +20,17 @@ pub struct ThreadingPlanStep {
     pub color: ColorHex,
     pub start_thread: usize,
     pub end_thread: usize,
+    /// 1-basierte Schaft-Nummern für die Fäden dieses Schritts (z. B. [1, 2, 3, 4]).
+    #[serde(default)]
+    pub shafts: Vec<usize>,
+}
+
+/// Belegte Litzen (Ösen) pro Schaft.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ShaftHeddleUsage {
+    pub shaft: usize,
+    pub used_heddles: usize,
 }
 
 /// Zentrale, erweiterbare Webpatrone (Weaving Draft) für Gatterkamm- und Schaftwebstühle.
@@ -89,7 +100,8 @@ impl WeavingDraft {
         }
     }
 
-    /// Generiert eine zusammengefasste Einfädel-Liste (Run-Length Encoding) aus `warp_colors`.
+    /// Generiert eine zusammengefasste Einfädel-Liste (Run-Length Encoding) aus `warp_colors`
+    /// inklusive der 1-basierten Schaft-Nummern aus `threading`.
     pub fn generate_threading_plan(&self) -> Vec<ThreadingPlanStep> {
         let mut plan = Vec::new();
         let mut iter = self.warp_colors.iter().enumerate();
@@ -98,23 +110,29 @@ impl WeavingDraft {
             return plan;
         };
 
+        let shaft_at = |idx: usize| -> usize { self.threading.get(idx).copied().unwrap_or(0) + 1 };
+
         let mut current_color = first_color.clone();
         let mut start_idx = first_idx;
         let mut count = 1usize;
+        let mut shafts = vec![shaft_at(first_idx)];
 
         for (idx, color) in iter {
             if color == &current_color {
                 count += 1;
+                shafts.push(shaft_at(idx));
             } else {
                 plan.push(ThreadingPlanStep {
                     count,
                     color: current_color,
                     start_thread: start_idx + 1,
                     end_thread: start_idx + count,
+                    shafts,
                 });
                 current_color = color.clone();
                 start_idx = idx;
                 count = 1;
+                shafts = vec![shaft_at(idx)];
             }
         }
 
@@ -123,9 +141,32 @@ impl WeavingDraft {
             color: current_color,
             start_thread: start_idx + 1,
             end_thread: start_idx + count,
+            shafts,
         });
 
         plan
+    }
+
+    /// Zählt, wie viele Litzen (Ösen) pro Schaft durch `threading` belegt werden.
+    pub fn shaft_heddle_usage(&self) -> Vec<ShaftHeddleUsage> {
+        let shaft_count = match self.loom_type {
+            LoomType::RigidHeddle => 2,
+            LoomType::ShaftLoom { shafts, .. } => shafts.max(1),
+        };
+        let mut counts = vec![0usize; shaft_count];
+        for &s in &self.threading {
+            if let Some(slot) = counts.get_mut(s) {
+                *slot += 1;
+            }
+        }
+        counts
+            .into_iter()
+            .enumerate()
+            .map(|(i, used_heddles)| ShaftHeddleUsage {
+                shaft: i + 1,
+                used_heddles,
+            })
+            .collect()
     }
 }
 
@@ -169,13 +210,24 @@ mod tests {
                     color: "#FF0000".to_string(),
                     start_thread: 1,
                     end_thread: 4,
+                    shafts: vec![1, 2, 1, 2],
                 },
                 ThreadingPlanStep {
                     count: 2,
                     color: "#0000FF".to_string(),
                     start_thread: 5,
                     end_thread: 6,
+                    shafts: vec![1, 2],
                 },
+            ]
+        );
+
+        let usage = draft.shaft_heddle_usage();
+        assert_eq!(
+            usage,
+            vec![
+                ShaftHeddleUsage { shaft: 1, used_heddles: 3 },
+                ShaftHeddleUsage { shaft: 2, used_heddles: 3 },
             ]
         );
     }

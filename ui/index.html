@@ -54,6 +54,11 @@
       </nav>
 
       <div class="sidebar-footer">
+        <div class="mode-switcher" role="group" aria-label="Webstuhl-Modus">
+          <button type="button" class="mode-btn active" data-mode="RigidHeddle" data-i18n="modeRigidHeddle">Gatterkamm</button>
+          <button type="button" class="mode-btn" data-mode="ShaftLoom" data-i18n="modeShaftLoom">Schaftwebstuhl</button>
+        </div>
+
         <div class="lang-switcher">
           <label for="lang-select" class="badge-label" data-i18n="languageLabel">Sprache</label>
           <select id="lang-select">
@@ -71,7 +76,7 @@
           <span class="badge-value" id="sidebar-loom-name">Gatterkamm (Leinwand)</span>
         </div>
         <div class="sidebar-links">
-          <button type="button" id="btn-check-updates" class="sidebar-btn" data-i18n="checkUpdatesBtn">Nach Updates suchen (v0.2.1)</button>
+          <button type="button" id="btn-check-updates" class="sidebar-btn" data-i18n="checkUpdatesBtn">Nach Updates suchen (v0.3.0)</button>
           <div id="update-status" class="update-status" hidden></div>
           <div class="ext-links-row">
             <a href="https://github.com/PatrickBarbian/HeddleLab" target="_blank" rel="noopener" class="ext-link">GitHub</a>
@@ -113,6 +118,11 @@
           <div id="save-profile-drawer" class="save-profile-drawer" hidden>
             <input id="new-profile-name" type="text" data-i18n-placeholder="profileNamePlaceholder" placeholder="z. B. Mein Ashford 80 cm (50/10)" />
             <input id="new-profile-width" type="number" min="10" step="5" value="60" title="Max. Webbreite (cm)" />
+            <div id="new-profile-shaft-fields" class="shaft-profile-inputs" hidden>
+              <input id="new-profile-shafts" type="number" min="2" max="16" value="4" title="Schäfte" placeholder="Schäfte" />
+              <input id="new-profile-treadles" type="number" min="2" max="16" value="4" title="Tritte" placeholder="Tritte" />
+              <input id="new-profile-heddles" type="text" value="100, 100, 100, 100" title="Litzen/Ösen pro Schaft (kommagetrennt)" placeholder="Ösen pro Schaft: z.B. 100, 100, 100, 100" />
+            </div>
             <button type="button" id="btn-confirm-save-profile" class="btn-primary" data-i18n="saveBtn">Speichern</button>
             <button type="button" id="btn-cancel-save-profile" class="btn-secondary" data-i18n="cancelBtn">Abbrechen</button>
           </div>
@@ -221,6 +231,11 @@
               </div>
             </div>
 
+            <div id="calc-shaft-card" class="card tip-card" hidden>
+              <h4>Litzen- / Ösen-Bedarf (Schaftwebstuhl)</h4>
+              <div id="calc-heddle-summary" class="heddle-summary-grid"></div>
+            </div>
+
             <div class="card tip-card">
               <h4 data-i18n="nextStepHeading">Nächster Schritt</h4>
               <p id="next-step-desc">
@@ -281,16 +296,39 @@
           </div>
         </div>
 
+        <!-- Schaftwebstuhl-Werkzeugleiste (nur im Schaftwebstuhl-Modus sichtbar) -->
+        <div id="shaft-toolbar" class="card editor-toolbar shaft-toolbar" hidden>
+          <div class="toolbar-group">
+            <span class="toolbar-label">Bindungs-Vorlage:</span>
+            <button type="button" class="chip" data-weave-preset="plain">Leinwand</button>
+            <button type="button" class="chip" data-weave-preset="twill22">Köper 2/2</button>
+            <button type="button" class="chip" data-weave-preset="herringbone">Fischgrat</button>
+            <button type="button" class="chip" data-weave-preset="waffle">Waffel</button>
+          </div>
+          <div class="toolbar-group">
+            <label class="toolbar-label" for="editor-shaft-count">Schäfte:</label>
+            <select id="editor-shaft-count" class="yarn-select">
+              <option value="4">4 Schäfte / 4 Tritte</option>
+              <option value="8">8 Schäfte / 8 Tritte</option>
+            </select>
+          </div>
+        </div>
+
         <div class="card editor-workspace">
           <div id="editor-scroll-area" class="editor-scroll-area">
             <div class="cad-grid-layout">
+              <div id="cad-threading-row" class="cad-top-row" hidden>
+                <canvas id="threading-canvas" class="draft-matrix-canvas" title="Einzug (Threading): Klick setzt den Schaft für diesen Kettfaden"></canvas>
+                <canvas id="tieup-canvas" class="draft-matrix-canvas" title="Schnürung (Tie-up): Klick verbindet Tritt mit Schaft"></canvas>
+              </div>
               <div class="cad-top-row">
                 <canvas id="warp-axis-canvas" class="axis-canvas warp-axis" title="Kettfäden (X-Achse): Klicken oder ziehen zum Malen"></canvas>
-                <div class="cad-corner" title="Leinwandbindung (Gatterkamm)">PW</div>
+                <div class="cad-corner" id="cad-corner-badge" title="Bindung">PW</div>
               </div>
               <div class="cad-main-row">
                 <canvas id="drawdown-canvas" class="drawdown-canvas"></canvas>
                 <canvas id="weft-axis-canvas" class="axis-canvas weft-axis" title="Schussfäden (Y-Achse): Klicken oder ziehen zum Malen"></canvas>
+                <canvas id="treadling-canvas" class="draft-matrix-canvas treadling-canvas" hidden title="Trittfolge (Treadling): Klick wählt den Tritt für diesen Schuss"></canvas>
               </div>
             </div>
           </div>
@@ -330,6 +368,11 @@
 
             <h4 data-i18n="colorsNeededHeading">Benötigte Farben</h4>
             <div id="threading-color-totals" class="color-totals-list"></div>
+
+            <div id="threading-shaft-usage-box" class="shaft-usage-box" hidden>
+              <h4>Belegte Litzen (Ösen) pro Schaft</h4>
+              <div id="threading-shaft-usage" class="color-totals-list"></div>
+            </div>
           </div>
 
           <div class="card threading-steps-card">
