@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LoomCraft — Handweaving Studio</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <div>
+          <h1>LoomCraft</h1>
+          <p class="brand-sub" data-i18n="brandSub">Handweb-Studio</p>
+        </div>
+      </div>
+
+      <nav class="nav-menu" aria-label="Hauptnavigation">
+        <button class="nav-item active" data-view="calculator">
+          <span class="nav-step">1</span>
+          <span class="nav-text">
+            <strong data-i18n="navCalcTitle">Kett- &amp; Schuss-Rechner</strong>
+            <small data-i18n="navCalcSub">Garnbedarf &amp; Maße</small>
+          </span>
+        </button>
+
+        <button class="nav-item" data-view="editor">
+          <span class="nav-step">2</span>
+          <span class="nav-text">
+            <strong data-i18n="navEditorTitle">Web-Editor (CAD)</strong>
+            <small data-i18n="navEditorSub">Farbmuster &amp; Gewebe</small>
+          </span>
+        </button>
+
+        <button class="nav-item" data-view="threading">
+          <span class="nav-step">3</span>
+          <span class="nav-text">
+            <strong data-i18n="navThreadingTitle">Einfädel-Planer</strong>
+            <small data-i18n="navThreadingSub">Anleitung für Kamm</small>
+          </span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="lang-switcher">
+          <label for="lang-select" class="badge-label" data-i18n="languageLabel">Sprache</label>
+          <select id="lang-select">
+            <option value="de">Deutsch</option>
+            <option value="en">English</option>
+            <option value="fr">Français</option>
+            <option value="es">Español</option>
+            <option value="it">Italiano</option>
+            <option value="nl">Nederlands</option>
+            <option value="ja">日本語</option>
+          </select>
+        </div>
+        <div class="loom-badge">
+          <span class="badge-label" data-i18n="activeProfileLabel">Aktives Profil</span>
+          <span class="badge-value" id="sidebar-loom-name">Gatterkamm (Leinwand)</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <!-- MODUL 1: Kett- und Schuss-Rechner -->
+      <section id="view-calculator" class="view active">
+        <header class="view-header">
+          <div>
+            <h2 data-i18n="calcHeading">Kett- &amp; Schuss-Rechner</h2>
+            <p data-i18n="calcSubtitle">Berechne Kettfadenanzahl, Fadenlängen und Garnbedarf inklusive Einsprung, Schrumpfung und Anbindeverlust.</p>
+          </div>
+          <div class="preset-bar" aria-label="Ashford Kamm-Schnellauswahl">
+            <span class="preset-label" data-i18n="ashfordReed">Ashford-Kamm:</span>
+            <button type="button" class="chip" data-epi="3">30/10 (3/cm)</button>
+            <button type="button" class="chip active" data-epi="4">40/10 (4/cm)</button>
+            <button type="button" class="chip" data-epi="5">50/10 (5/cm)</button>
+            <button type="button" class="chip" data-epi="6">60/10 (6/cm)</button>
+          </div>
+        </header>
+
+        <!-- Webstuhl-Profile -->
+        <div class="card profile-bar">
+          <div class="profile-select-group">
+            <label for="profile-select" data-i18n="profileLabel">Webstuhl-Profil:</label>
+            <select id="profile-select"></select>
+            <button type="button" id="btn-delete-profile" class="btn-secondary" data-i18n="deleteBtn">Löschen</button>
+          </div>
+
+          <div class="profile-actions">
+            <button type="button" id="btn-toggle-save-profile" class="btn-outline" data-i18n="saveAsProfileBtn">+ Aktuelle Werte als Profil speichern</button>
+          </div>
+
+          <div id="save-profile-drawer" class="save-profile-drawer" hidden>
+            <input id="new-profile-name" type="text" data-i18n-placeholder="profileNamePlaceholder" placeholder="z. B. Mein Ashford 80 cm (50/10)" />
+            <input id="new-profile-width" type="number" min="10" step="5" value="60" title="Max. Webbreite (cm)" />
+            <button type="button" id="btn-confirm-save-profile" class="btn-primary" data-i18n="saveBtn">Speichern</button>
+            <button type="button" id="btn-cancel-save-profile" class="btn-secondary" data-i18n="cancelBtn">Abbrechen</button>
+          </div>
+        </div>
+
+        <div class="calculator-grid">
+          <form id="calc-form" class="card form-card" novalidate>
+            <h3 data-i18n="paramsHeading">Projekt-Parameter</h3>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="finishedWidthCm" data-i18n="finishedWidth">Fertigbreite (cm)</label>
+                <input id="finishedWidthCm" type="number" min="1" step="0.5" value="45" />
+                <span class="hint" data-i18n="finishedWidthHint">Gewünschte Breite nach dem Waschen</span>
+              </div>
+
+              <div class="field">
+                <label for="finishedLengthCm" data-i18n="finishedLength">Fertiglänge (cm)</label>
+                <input id="finishedLengthCm" type="number" min="1" step="1" value="180" />
+                <span class="hint" data-i18n="finishedLengthHint">Gewünschte Länge nach dem Waschen</span>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="endsPerCm" data-i18n="endsPerCm">Kettfäden pro cm (Kammdichte)</label>
+                <input id="endsPerCm" type="number" min="0.5" step="0.5" value="4" />
+                <span class="hint" data-i18n="endsPerCmHint">z. B. 4 bei einem 40/10er Gatterkamm</span>
+              </div>
+
+              <div class="field">
+                <label for="picksPerCm" data-i18n="picksPerCm">Schussfäden pro cm (optional)</label>
+                <input id="picksPerCm" type="number" min="0.5" step="0.5" data-i18n-placeholder="picksPerCmPlaceholder" placeholder="Wie Kammdichte" />
+                <span class="hint" data-i18n="picksPerCmHint">Leer lassen für ausgewogene Leinwandbindung</span>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="takeUpPercent" data-i18n="takeUp">Einsprung / Take-up (%)</label>
+                <input id="takeUpPercent" type="number" min="0" max="89" step="0.5" value="10" />
+                <span class="hint" data-i18n="takeUpHint">Zusammenziehen durch Verkreuzung (üblich: 8–12%)</span>
+              </div>
+
+              <div class="field">
+                <label for="shrinkagePercent" data-i18n="shrinkage">Schrumpfung beim Waschen (%)</label>
+                <input id="shrinkagePercent" type="number" min="0" max="89" step="0.5" value="10" />
+                <span class="hint" data-i18n="shrinkageHint">Einlaufen bei der Nassveredelung (üblich: 8–15%)</span>
+              </div>
+            </div>
+
+            <div class="field-row single">
+              <div class="field">
+                <label for="loomWasteCm" data-i18n="loomWaste">Anbindeverlust / Webverlust (cm)</label>
+                <input id="loomWasteCm" type="number" min="0" step="1" value="50" />
+                <span class="hint" data-i18n="loomWasteHint">Verlust durch Anbinden vorne &amp; hinten (üblich: 40–60 cm)</span>
+              </div>
+            </div>
+
+            <div id="calc-error" class="error-banner" hidden></div>
+          </form>
+
+          <div class="results-column">
+            <div class="card results-card">
+              <h3 data-i18n="liveResultHeading">Live-Ergebnis</h3>
+
+              <div class="kpi-grid">
+                <div class="kpi primary">
+                  <span class="kpi-label" data-i18n="totalEndsLabel">Gesamtzahl Kettfäden</span>
+                  <strong class="kpi-value" id="res-total-ends">—</strong>
+                  <span class="kpi-unit" data-i18n="threadsUnit">Fäden</span>
+                </div>
+
+                <div class="kpi primary">
+                  <span class="kpi-label" data-i18n="lengthPerEndLabel">Länge pro Kettfaden</span>
+                  <strong class="kpi-value" id="res-length-per-end">—</strong>
+                  <span class="kpi-unit">cm</span>
+                </div>
+
+                <div class="kpi accent">
+                  <span class="kpi-label" data-i18n="totalWarpLabel">Gesamtlänge Kettgarn</span>
+                  <strong class="kpi-value" id="res-total-warp">—</strong>
+                  <span class="kpi-unit" data-i18n="metersUnit">Meter</span>
+                </div>
+
+                <div class="kpi accent">
+                  <span class="kpi-label" data-i18n="totalWeftLabel">Gesamtlänge Schussgarn</span>
+                  <strong class="kpi-value" id="res-total-weft">—</strong>
+                  <span class="kpi-unit" data-i18n="metersUnit">Meter</span>
+                </div>
+              </div>
+
+              <div class="sub-metrics">
+                <div class="sub-metric">
+                  <span data-i18n="weavingWidthLabel">Webbreite auf dem Kamm</span>
+                  <strong id="res-weaving-width">—</strong>
+                </div>
+                <div class="sub-metric">
+                  <span data-i18n="wovenLengthLabel">Gewebte Länge (ungewaschen)</span>
+                  <strong id="res-woven-length">—</strong>
+                </div>
+                <div class="sub-metric">
+                  <span data-i18n="totalPicksLabel">Anzahl Schussfäden</span>
+                  <strong id="res-total-picks">—</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="card tip-card">
+              <h4 data-i18n="nextStepHeading">Nächster Schritt</h4>
+              <p id="next-step-desc">
+                Die berechneten <strong id="summary-ends">200</strong> Kettfäden können direkt als Basis für das Farbmuster im <strong>Web-Editor</strong> übernommen werden.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MODUL 2: Visueller Web-Editor -->
+      <section id="view-editor" class="view">
+        <header class="view-header">
+          <div>
+            <h2 data-i18n="editorHeading">Visueller Web-Editor (CAD)</h2>
+            <p data-i18n="editorSubtitle">Klicke oder ziehe in der oberen (Kette) und rechten (Schuss) Leiste, um Farben zu malen.</p>
+          </div>
+          <div class="editor-header-actions">
+            <button type="button" id="editor-sync-from-calc" class="btn-outline" data-i18n="syncFromCalcBtn">Aus Rechner übernehmen</button>
+            <button type="button" id="editor-reset-pattern" class="btn-secondary" data-i18n="resetPatternBtn">Muster zurücksetzen</button>
+          </div>
+        </header>
+
+        <div class="card editor-toolbar">
+          <div class="toolbar-group">
+            <span class="toolbar-label" data-i18n="yarnColorLabel">Garnfarbe:</span>
+            <div id="editor-palette" class="palette-row"></div>
+            <input id="editor-custom-color" type="color" value="#B45309" title="Custom color" />
+          </div>
+
+          <div class="toolbar-group">
+            <label class="toolbar-label" for="editor-warp-count" data-i18n="warpLabel">Kette:</label>
+            <input id="editor-warp-count" class="mini-input" type="number" min="2" max="400" value="32" />
+            <label class="toolbar-label" for="editor-weft-count" data-i18n="weftLabel">Schuss:</label>
+            <input id="editor-weft-count" class="mini-input" type="number" min="2" max="400" value="32" />
+            <button type="button" id="editor-apply-dims" class="btn-secondary" data-i18n="applySizeBtn">Größe setzen</button>
+          </div>
+
+          <div class="toolbar-group zoom-group">
+            <span class="toolbar-label" data-i18n="zoomLabel">Zoom:</span>
+            <button type="button" id="editor-zoom-out" class="btn-icon">−</button>
+            <input id="editor-zoom" type="range" min="6" max="36" step="2" value="16" />
+            <button type="button" id="editor-zoom-in" class="btn-icon">+</button>
+            <span id="editor-zoom-label" class="zoom-label">100%</span>
+            <button type="button" id="editor-zoom-reset" class="btn-secondary" data-i18n="resetBtn">Reset</button>
+          </div>
+        </div>
+
+        <div class="card editor-workspace">
+          <div id="editor-scroll-area" class="editor-scroll-area">
+            <div class="cad-grid-layout">
+              <div class="cad-top-row">
+                <canvas id="warp-axis-canvas" class="axis-canvas warp-axis" title="Kettfäden (X-Achse): Klicken oder ziehen zum Malen"></canvas>
+                <div class="cad-corner" title="Leinwandbindung (Gatterkamm)">PW</div>
+              </div>
+              <div class="cad-main-row">
+                <canvas id="drawdown-canvas" class="drawdown-canvas"></canvas>
+                <canvas id="weft-axis-canvas" class="axis-canvas weft-axis" title="Schussfäden (Y-Achse): Klicken oder ziehen zum Malen"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="editor-statusbar">
+            <span id="editor-hover-info">Bewege die Maus über das Gewebe für Faden-Details.</span>
+            <span id="editor-dims-preview" class="muted">Rechner-Vorschau: —</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- MODUL 3: Einfädel-Planer -->
+      <section id="view-threading" class="view">
+        <header class="view-header">
+          <div>
+            <h2 data-i18n="threadingHeading">Einfädel-Planer</h2>
+            <p data-i18n="threadingSubtitle">Automatische Schritt-für-Schritt-Anleitung aus der X-Achse (Kette) deines Web-Editors.</p>
+          </div>
+          <div class="editor-header-actions">
+            <button type="button" id="threading-reset-checks" class="btn-secondary" data-i18n="resetChecksBtn">Häkchen zurücksetzen</button>
+            <button type="button" id="threading-copy-text" class="btn-outline" data-i18n="copyTextBtn">Als Text kopieren</button>
+          </div>
+        </header>
+
+        <div class="threading-layout">
+          <div class="card threading-summary-card">
+            <h3 data-i18n="warpSummaryHeading">Kett-Übersicht</h3>
+            <div class="threading-stats">
+              <div class="stat-pill">
+                <span data-i18n="totalWarpEndsStat">Gesamte Kettfäden</span>
+                <strong id="threading-total-ends">0</strong>
+              </div>
+              <div class="stat-pill">
+                <span data-i18n="threadingStepsStat">Einfädel-Schritte</span>
+                <strong id="threading-total-steps">0</strong>
+              </div>
+            </div>
+
+            <h4 data-i18n="colorsNeededHeading">Benötigte Farben</h4>
+            <div id="threading-color-totals" class="color-totals-list"></div>
+          </div>
+
+          <div class="card threading-steps-card">
+            <div class="steps-header">
+              <h3 data-i18n="threadingOrderHeading">Einzugs-Reihenfolge (von links nach rechts)</h3>
+              <span id="threading-progress" class="muted">0 / 0</span>
+            </div>
+            <ol id="threading-steps-list" class="threading-steps-list"></ol>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
