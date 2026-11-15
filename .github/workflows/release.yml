@@ -50,6 +50,6 @@ jobs:
           args: ${{ matrix.args }}
           tagName: v__VERSION__
           releaseName: "LoomCraft v__VERSION__"
-          releaseBody: "Automated Windows & macOS builds for LoomCraft."
-          releaseDraft: true
+          releaseBody: "Automated Windows (.exe/.msi) & macOS (.dmg) builds for LoomCraft."
+          releaseDraft: false
           prerelease: false

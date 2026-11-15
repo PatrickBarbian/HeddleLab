@@ -394,3 +394,41 @@ loadProfiles().then(() => {
   recalculate();
   refreshThreadingPlan();
 });
+
+// --- GitHub Update Checker ---
+const APP_VERSION = "0.2.0";
+const updateBtn = document.getElementById("btn-check-updates");
+const updateStatusEl = document.getElementById("update-status");
+
+function compareVersions(a, b) {
+  const pa = a.replace(/^v/, "").split(".").map(Number);
+  const pb = b.replace(/^v/, "").split(".").map(Number);
+  for (let i = 0; i < 3; i++) {
+    const diff = (pa[i] || 0) - (pb[i] || 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+updateBtn.addEventListener("click", async () => {
+  updateStatusEl.hidden = false;
+  updateStatusEl.textContent = t("updateChecking");
+
+  try {
+    const res = await fetch(
+      "https://api.github.com/repos/PatrickBarbian/LoomCraft/releases/latest",
+      { headers: { Accept: "application/vnd.github+json" } }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const latestTag = data.tag_name || "";
+
+    if (compareVersions(latestTag, APP_VERSION) > 0) {
+      updateStatusEl.innerHTML = `${t("updateAvailable").replace("{tag}", latestTag)} · <a href="${data.html_url}" target="_blank" rel="noopener">${t("updateDownloadLink")}</a>`;
+    } else {
+      updateStatusEl.textContent = t("updateUpToDate");
+    }
+  } catch {
+    updateStatusEl.innerHTML = `${t("updateError")} <a href="https://github.com/PatrickBarbian/LoomCraft/releases" target="_blank" rel="noopener">GitHub Releases</a>`;
+  }
+});

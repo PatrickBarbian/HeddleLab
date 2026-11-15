@@ -43,6 +43,14 @@
             <small data-i18n="navThreadingSub">Anleitung für Kamm</small>
           </span>
         </button>
+
+        <button class="nav-item" data-view="guide">
+          <span class="nav-step">?</span>
+          <span class="nav-text">
+            <strong data-i18n="navGuideTitle">Bedienungsanleitung</strong>
+            <small data-i18n="navGuideSub">Hilfe &amp; Tipps</small>
+          </span>
+        </button>
       </nav>
 
       <div class="sidebar-footer">
@@ -61,6 +69,14 @@
         <div class="loom-badge">
           <span class="badge-label" data-i18n="activeProfileLabel">Aktives Profil</span>
           <span class="badge-value" id="sidebar-loom-name">Gatterkamm (Leinwand)</span>
+        </div>
+        <div class="sidebar-links">
+          <button type="button" id="btn-check-updates" class="sidebar-btn" data-i18n="checkUpdatesBtn">Nach Updates suchen (v0.2.0)</button>
+          <div id="update-status" class="update-status" hidden></div>
+          <div class="ext-links-row">
+            <a href="https://github.com/PatrickBarbian/LoomCraft" target="_blank" rel="noopener" class="ext-link">GitHub</a>
+            <a href="https://buymeacoffee.com/patrickbarbian" target="_blank" rel="noopener" class="ext-link coffee">☕ Buy me a coffee</a>
+          </div>
         </div>
       </div>
     </aside>
@@ -236,6 +252,18 @@
           </div>
 
           <div class="toolbar-group">
+            <label class="toolbar-label" for="editor-yarn-profile" data-i18n="materialLabel">Material:</label>
+            <select id="editor-yarn-profile" class="yarn-select"></select>
+            <button type="button" id="editor-save-yarn-profile" class="btn-secondary" title="Aktuelle Farbe &amp; Dicke als Material-Profil speichern">+ Garn</button>
+          </div>
+
+          <div class="toolbar-group">
+            <label class="toolbar-label" for="editor-thickness" data-i18n="thicknessLabel">Dicke:</label>
+            <input id="editor-thickness" type="range" min="0.5" max="1.6" step="0.1" value="1.0" />
+            <span id="editor-thickness-label" class="zoom-label">1.0×</span>
+          </div>
+
+          <div class="toolbar-group">
             <label class="toolbar-label" for="editor-warp-count" data-i18n="warpLabel">Kette:</label>
             <input id="editor-warp-count" class="mini-input" type="number" min="2" max="400" value="32" />
             <label class="toolbar-label" for="editor-weft-count" data-i18n="weftLabel">Schuss:</label>
@@ -246,7 +274,7 @@
           <div class="toolbar-group zoom-group">
             <span class="toolbar-label" data-i18n="zoomLabel">Zoom:</span>
             <button type="button" id="editor-zoom-out" class="btn-icon">−</button>
-            <input id="editor-zoom" type="range" min="6" max="36" step="2" value="16" />
+            <input id="editor-zoom" type="range" min="6" max="40" step="2" value="18" />
             <button type="button" id="editor-zoom-in" class="btn-icon">+</button>
             <span id="editor-zoom-label" class="zoom-label">100%</span>
             <button type="button" id="editor-zoom-reset" class="btn-secondary" data-i18n="resetBtn">Reset</button>
@@ -311,6 +339,56 @@
             </div>
             <ol id="threading-steps-list" class="threading-steps-list"></ol>
           </div>
+        </div>
+      </section>
+
+      <!-- MODUL 4: Bedienungsanleitung -->
+      <section id="view-guide" class="view">
+        <header class="view-header">
+          <div>
+            <h2 data-i18n="guideHeading">Bedienungsanleitung — LoomCraft</h2>
+            <p data-i18n="guideSubtitle">Schritt-für-Schritt-Erklärung für Gatterkamm-Webrahmen (z. B. Ashford Rigid Heddle).</p>
+          </div>
+        </header>
+
+        <div class="guide-grid">
+          <article class="card guide-card">
+            <h3>1. Kett- &amp; Schuss-Rechner + Webstuhl-Profile</h3>
+            <ul>
+              <li><strong>Webstuhl-Profil:</strong> Wähle deinen Webrahmen (z. B. Ashford 60 cm) oder speichere eigene Profile mit Standard-Kammdichte und Webverlust ab.</li>
+              <li><strong>Fertigbreite &amp; Fertiglänge:</strong> Die gewünschten Maße des gewaschenen, fertigen Stoffes.</li>
+              <li><strong>Einsprung (Take-up):</strong> Durch das Auf und Ab der Fäden verkürzt sich das Garn beim Weben (üblich: 8–12 %).</li>
+              <li><strong>Schrumpfung:</strong> Einlaufen beim Waschen/Nassveredeln (üblich: 8–15 % bei Wolle/Baumwolle).</li>
+              <li><strong>Anbindeverlust (Loom Waste):</strong> Garnrest vorne und hinten zum Anbinden (üblich: 40–60 cm).</li>
+            </ul>
+          </article>
+
+          <article class="card guide-card">
+            <h3>2. Visueller Web-Editor (CAD) &amp; Fadendicken</h3>
+            <ul>
+              <li><strong>Aus Rechner übernehmen:</strong> Überträgt die berechnete Kett- und Schussanzahl direkt ins Zeichenfeld.</li>
+              <li><strong>Farbe &amp; Material wählen:</strong> Wähle ein fertiges Material-Profil (z. B. <em>Baumwolle 8/2</em> fein vs. <em>Dochtgarn</em> dick) oder stelle Farbe und <strong>Fadendicke (0.5× – 1.6×)</strong> frei ein.</li>
+              <li><strong>Malen:</strong> Klicke oder ziehe mit gedrückter Maustaste in der <strong>oberen Leiste</strong> (Kettfäden) und der <strong>rechten Leiste</strong> (Schussfäden).</li>
+              <li><strong>Zoom &amp; Scroll:</strong> Nutze den Zoom-Slider oder <code>Strg + Mausrad</code>. Dünne Fäden zeigen realistische Zwischenräume, dicke Fäden füllen die Zelle.</li>
+            </ul>
+          </article>
+
+          <article class="card guide-card">
+            <h3>3. Einfädel-Planer (Kamm einrichten)</h3>
+            <ul>
+              <li><strong>Automatische Liste:</strong> Alle benachbarten Kettfäden gleicher Farbe werden zusammengefasst (z. B. <em>4× Naturweiß, 4× Indigo</em>).</li>
+              <li><strong>Abhaken beim Weben:</strong> Klicke jeden Schritt am Webrahmen ab, um immer zu wissen, wo du gerade bist.</li>
+              <li><strong>Gatterkamm-Tipp:</strong> Bei Leinwandbindung kommt abwechselnd ein Faden in einen <strong>Schlitz</strong> und der nächste in ein <strong>Loch</strong>.</li>
+            </ul>
+          </article>
+
+          <article class="card guide-card">
+            <h3>4. Updates &amp; Unterstützung</h3>
+            <ul>
+              <li><strong>Updates:</strong> Über den Button <em>„Nach Updates suchen“</em> in der Seitenleiste prüft LoomCraft direkt auf GitHub, ob eine neue Version für Windows oder Mac verfügbar ist.</li>
+              <li><strong>Open Source &amp; Support:</strong> Quellcode auf <a href="https://github.com/PatrickBarbian/LoomCraft" target="_blank" rel="noopener">GitHub</a> · Wenn dir LoomCraft hilft, freue ich mich über einen Kaffee via <a href="https://buymeacoffee.com/patrickbarbian" target="_blank" rel="noopener">Buy Me a Coffee</a>!</li>
+            </ul>
+          </article>
         </div>
       </section>
     </main>

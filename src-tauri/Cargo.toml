@@ -1,6 +1,6 @@
 [package]
 name = "weben-planer"
-version = "0.1.0"
+version = "0.2.0"
 description = "Handweb-Planer für Gatterkamm- und Schaftwebstühle"
 authors = ["Weben Planer"]
 edition = "2021"
