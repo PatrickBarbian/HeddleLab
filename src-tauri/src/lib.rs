@@ -14,6 +14,10 @@ pub fn run() {
             commands::save_loom_profile,
             commands::delete_loom_profile,
             commands::open_external_url,
+            commands::list_projects,
+            commands::save_project,
+            commands::load_project,
+            commands::delete_project,
         ])
         .run(tauri::generate_context!())
         .expect("Fehler beim Starten der Tauri-Anwendung");

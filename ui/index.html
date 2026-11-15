@@ -19,6 +19,15 @@
         </div>
       </div>
 
+      <div class="project-box">
+        <input id="project-name-input" type="text" value="Mein Webprojekt" placeholder="Projektname..." aria-label="Projektname" />
+        <div class="project-box-actions">
+          <button type="button" id="btn-save-project" class="sidebar-btn primary" data-i18n="saveProjectBtn">Speichern</button>
+          <button type="button" id="btn-open-projects" class="sidebar-btn" data-i18n="openProjectsBtn">Projekte</button>
+        </div>
+        <div id="project-save-toast" class="project-toast" hidden></div>
+      </div>
+
       <nav class="nav-menu" aria-label="Hauptnavigation">
         <button class="nav-item active" data-view="calculator">
           <span class="nav-step">1</span>
@@ -76,7 +85,7 @@
           <span class="badge-value" id="sidebar-loom-name">Gatterkamm (Leinwand)</span>
         </div>
         <div class="sidebar-links">
-          <button type="button" id="btn-check-updates" class="sidebar-btn" data-i18n="checkUpdatesBtn">Nach Updates suchen (v0.3.1)</button>
+          <button type="button" id="btn-check-updates" class="sidebar-btn" data-i18n="checkUpdatesBtn">Nach Updates suchen (v0.3.2)</button>
           <div id="update-status" class="update-status" hidden></div>
           <div class="ext-links-row">
             <a href="https://github.com/PatrickBarbian/HeddleLab" target="_blank" rel="noopener" class="ext-link">GitHub</a>
@@ -435,6 +444,24 @@
         </div>
       </section>
     </main>
+  </div>
+
+  <!-- Gespeicherte Projekte Modal -->
+  <div id="projects-modal" class="modal-backdrop" hidden>
+    <div class="modal-card card" role="dialog" aria-modal="true" aria-labelledby="projects-modal-title">
+      <div class="modal-header">
+        <h3 id="projects-modal-title" data-i18n="projectsModalTitle">Gespeicherte Projekte</h3>
+        <button type="button" id="btn-close-projects" class="btn-icon">✕</button>
+      </div>
+      <div class="modal-actions-row">
+        <button type="button" id="btn-export-project" class="btn-outline" data-i18n="exportProjectBtn">Als .heddle exportieren</button>
+        <label class="btn-secondary file-import-label">
+          <span data-i18n="importProjectBtn">.heddle Datei öffnen</span>
+          <input id="input-import-project" type="file" accept=".heddle,.json" hidden />
+        </label>
+      </div>
+      <div id="projects-list" class="projects-list"></div>
+    </div>
   </div>
 
   <script type="module" src="app.js"></script>

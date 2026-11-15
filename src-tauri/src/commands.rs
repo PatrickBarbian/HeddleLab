@@ -3,6 +3,7 @@ use tauri::{AppHandle, Manager};
 use crate::domain::calculator::{self, WarpWeftInput, WarpWeftOutput};
 use crate::domain::draft::{ThreadingPlanStep, WeavingDraft};
 use crate::domain::profiles::{self, LoomProfile};
+use crate::domain::projects::{self, HeddleProject, ProjectSummary};
 
 #[tauri::command]
 pub fn calculate_warp_weft(input: WarpWeftInput) -> Result<WarpWeftOutput, String> {
@@ -82,4 +83,40 @@ pub fn open_external_url(url: String) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[tauri::command]
+pub fn list_projects(app: AppHandle) -> Result<Vec<ProjectSummary>, String> {
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("App-Datenverzeichnis nicht gefunden: {e}"))?;
+    projects::list_projects(&dir)
+}
+
+#[tauri::command]
+pub fn save_project(app: AppHandle, project: HeddleProject) -> Result<ProjectSummary, String> {
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("App-Datenverzeichnis nicht gefunden: {e}"))?;
+    projects::save_project(&dir, project)
+}
+
+#[tauri::command]
+pub fn load_project(app: AppHandle, id: String) -> Result<HeddleProject, String> {
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("App-Datenverzeichnis nicht gefunden: {e}"))?;
+    projects::load_project(&dir, &id)
+}
+
+#[tauri::command]
+pub fn delete_project(app: AppHandle, id: String) -> Result<(), String> {
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("App-Datenverzeichnis nicht gefunden: {e}"))?;
+    projects::delete_project(&dir, &id)
 }

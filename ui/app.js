@@ -45,6 +45,7 @@ const state = {
   profiles: [],
   activeProfileId: null,
   loomMode: "RigidHeddle", // "RigidHeddle" | "ShaftLoom"
+  currentProjectId: `proj-${Date.now()}`,
   threadingPlan: [],
   checkedSteps: new Set(),
 };
@@ -515,8 +516,163 @@ document.addEventListener("click", (e) => {
   }
 });
 
+// --- Projekt Speichern / Öffnen / Export / Import ---
+const projectNameInput = document.getElementById("project-name-input");
+const projectToastEl = document.getElementById("project-save-toast");
+const projectsModalEl = document.getElementById("projects-modal");
+const projectsListEl = document.getElementById("projects-list");
+
+function buildProjectSnapshot() {
+  return {
+    id: state.currentProjectId,
+    name: projectNameInput.value.trim() || "Mein Webprojekt",
+    updatedAt: new Date().toISOString(),
+    loomMode: state.loomMode,
+    activeProfileId: state.activeProfileId,
+    calculatorInput: readCalculatorInput(),
+    draft: editor.draft,
+    checkedSteps: Array.from(state.checkedSteps),
+  };
+}
+
+function applyLoadedProject(project) {
+  state.currentProjectId = project.id || `proj-${Date.now()}`;
+  projectNameInput.value = project.name || "Mein Webprojekt";
+
+  if (project.activeProfileId) {
+    const prof = state.profiles.find((p) => p.id === project.activeProfileId);
+    if (prof) {
+      state.activeProfileId = prof.id;
+      sidebarLoomName.textContent = prof.name;
+      renderProfileSelect();
+    }
+  }
+
+  const calc = project.calculatorInput || {};
+  if (calc.finishedWidthCm != null) inputs.finishedWidthCm.value = calc.finishedWidthCm;
+  if (calc.finishedLengthCm != null) inputs.finishedLengthCm.value = calc.finishedLengthCm;
+  if (calc.endsPerCm != null) inputs.endsPerCm.value = calc.endsPerCm;
+  inputs.picksPerCm.value = calc.picksPerCm ?? "";
+  if (calc.takeUpPercent != null) inputs.takeUpPercent.value = calc.takeUpPercent;
+  if (calc.shrinkagePercent != null) inputs.shrinkagePercent.value = calc.shrinkagePercent;
+  if (calc.loomWasteCm != null) inputs.loomWasteCm.value = calc.loomWasteCm;
+
+  const isShaft = project.loomMode === "ShaftLoom" || project.draft?.loomType?.kind === "ShaftLoom";
+  const shafts = project.draft?.loomType?.shafts || 4;
+  const treadles = project.draft?.loomType?.treadles || 4;
+  state.loomMode = isShaft ? "ShaftLoom" : "RigidHeddle";
+  document.querySelectorAll(".mode-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.mode === state.loomMode);
+  });
+  document.getElementById("new-profile-shaft-fields").hidden = !isShaft;
+  document.getElementById("threading-shaft-usage-box").hidden = !isShaft;
+
+  editor.loadDraft(project.draft);
+  state.checkedSteps = new Set(project.checkedSteps || []);
+  recalculate();
+  refreshThreadingPlan();
+  projectsModalEl.hidden = true;
+}
+
+function showProjectToast(msg) {
+  projectToastEl.textContent = msg;
+  projectToastEl.hidden = false;
+  setTimeout(() => {
+    projectToastEl.hidden = true;
+  }, 2000);
+}
+
+document.getElementById("btn-save-project").addEventListener("click", async () => {
+  if (!invoke) return;
+  const snapshot = buildProjectSnapshot();
+  try {
+    await invoke("save_project", { project: snapshot });
+    showProjectToast(t("projectSavedToast") || "Gespeichert!");
+  } catch (err) {
+    renderError(typeof err === "string" ? err : "Projekt konnte nicht gespeichert werden.");
+  }
+});
+
+async function refreshProjectsModalList() {
+  if (!invoke) return;
+  try {
+    const projects = await invoke("list_projects");
+    projectsListEl.innerHTML = "";
+    if (projects.length === 0) {
+      projectsListEl.innerHTML = `<p class="muted">${t("noSavedProjects") || "Noch keine gespeicherten Projekte."}</p>`;
+      return;
+    }
+    projects.forEach((p) => {
+      const row = document.createElement("div");
+      row.className = "project-row";
+      const dateStr = new Date(p.updatedAt).toLocaleString();
+      const modeText = p.loomMode === "ShaftLoom" ? "Schaftwebstuhl" : "Gatterkamm";
+      row.innerHTML = `
+        <div class="project-row-info">
+          <strong>${p.name}</strong>
+          <small>${modeText} · ${dateStr}</small>
+        </div>
+        <div class="project-row-actions">
+          <button type="button" class="btn-primary btn-open-item">${t("openBtn") || "Öffnen"}</button>
+          <button type="button" class="btn-secondary btn-del-item">✕</button>
+        </div>
+      `;
+      row.querySelector(".btn-open-item").addEventListener("click", async () => {
+        const full = await invoke("load_project", { id: p.id });
+        applyLoadedProject(full);
+      });
+      row.querySelector(".btn-del-item").addEventListener("click", async () => {
+        await invoke("delete_project", { id: p.id });
+        refreshProjectsModalList();
+      });
+      projectsListEl.appendChild(row);
+    });
+  } catch (err) {
+    console.error("Projekte laden fehlgeschlagen:", err);
+  }
+}
+
+document.getElementById("btn-open-projects").addEventListener("click", () => {
+  projectsModalEl.hidden = false;
+  refreshProjectsModalList();
+});
+
+document.getElementById("btn-close-projects").addEventListener("click", () => {
+  projectsModalEl.hidden = true;
+});
+
+projectsModalEl.addEventListener("click", (e) => {
+  if (e.target === projectsModalEl) projectsModalEl.hidden = true;
+});
+
+document.getElementById("btn-export-project").addEventListener("click", () => {
+  const snapshot = buildProjectSnapshot();
+  const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const safeName = snapshot.name.replace(/[^a-zA-Z0-9_-]+/g, "_");
+  a.href = url;
+  a.download = `${safeName}.heddle`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById("input-import-project").addEventListener("change", async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    applyLoadedProject(parsed);
+  } catch {
+    alert("Ungültige .heddle Projektdatei.");
+  } finally {
+    e.target.value = "";
+  }
+});
+
 // --- GitHub Auto-Updater (Tauri v2 Plugin + Fallback) ---
-const APP_VERSION = "0.3.1";
+const APP_VERSION = "0.3.2";
 const updateBtn = document.getElementById("btn-check-updates");
 const updateStatusEl = document.getElementById("update-status");
 

@@ -459,6 +459,36 @@ export class WeavingEditor {
     this.weftCountEl.value = this.draft.weftColors.length;
   }
 
+  loadDraft(draftData) {
+    if (!draftData || !Array.isArray(draftData.warpColors)) return;
+    this.draft = {
+      loomType: draftData.loomType ?? { kind: "RigidHeddle" },
+      warpColors: [...draftData.warpColors],
+      weftColors: [...draftData.weftColors],
+      warpThicknesses:
+        draftData.warpThicknesses ??
+        draftData.warpColors.map(() => 1.0),
+      weftThicknesses:
+        draftData.weftThicknesses ??
+        draftData.weftColors.map(() => 1.0),
+      threading: [...(draftData.threading ?? [])],
+      tieUp: (draftData.tieUp ?? [[true, false], [false, true]]).map((r) => [...r]),
+      treadling: [...(draftData.treadling ?? [])],
+    };
+    const isShaft = this.draft.loomType.kind === "ShaftLoom";
+    this.shaftToolbarEl.hidden = !isShaft;
+    this.threadingRowEl.hidden = !isShaft;
+    this.treadlingCanvas.hidden = !isShaft;
+    if (isShaft) {
+      this.shaftCountSelectEl.value = String(this.draft.loomType.shafts);
+      this.cornerBadgeEl.textContent = `${this.draft.loomType.shafts}S`;
+    } else {
+      this.cornerBadgeEl.textContent = "PW";
+    }
+    this.syncDimensionInputs();
+    this.render();
+  }
+
   paintWarpAtEvent(e) {
     const rect = this.warpCanvas.getBoundingClientRect();
     const x = Math.floor((e.clientX - rect.left) / this.cellSize);
