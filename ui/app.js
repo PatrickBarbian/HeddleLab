@@ -503,8 +503,20 @@ loadProfiles().then(() => {
   refreshThreadingPlan();
 });
 
-// --- GitHub Update Checker ---
-const APP_VERSION = "0.3.0";
+// --- Externe Links im Standard-Browser öffnen (Tauri v2) ---
+document.addEventListener("click", (e) => {
+  const link = e.target.closest("a[href^='http']");
+  if (!link) return;
+  if (invoke) {
+    e.preventDefault();
+    invoke("open_external_url", { url: link.href }).catch((err) => {
+      console.error("Externer Link fehlgeschlagen:", err);
+    });
+  }
+});
+
+// --- GitHub Auto-Updater (Tauri v2 Plugin + Fallback) ---
+const APP_VERSION = "0.3.1";
 const updateBtn = document.getElementById("btn-check-updates");
 const updateStatusEl = document.getElementById("update-status");
 
@@ -522,6 +534,50 @@ updateBtn.addEventListener("click", async () => {
   updateStatusEl.hidden = false;
   updateStatusEl.textContent = t("updateChecking");
 
+  // 1. Echter In-App Auto-Updater über tauri-plugin-updater
+  const updater = window.__TAURI__?.updater;
+  const processApi = window.__TAURI__?.process;
+  if (updater?.check) {
+    try {
+      const update = await updater.check();
+      if (!update) {
+        updateStatusEl.textContent = t("updateUpToDate");
+        return;
+      }
+
+      updateStatusEl.innerHTML = `
+        <div>${t("updateAvailable").replace("{tag}", `v${update.version}`)}</div>
+        <button type="button" id="btn-install-update" class="btn-primary" style="margin-top:6px;width:100%;font-size:0.78rem;">
+          ${t("updateInstallBtn") || "Jetzt installieren & neu starten"}
+        </button>
+      `;
+
+      document.getElementById("btn-install-update").addEventListener("click", async () => {
+        let downloaded = 0;
+        let total = 0;
+        await update.downloadAndInstall((event) => {
+          if (event.event === "Started") {
+            total = event.data.contentLength || 0;
+            updateStatusEl.textContent = (t("updateDownloading") || "Lade Update ({pct}%)...").replace("{pct}", "0");
+          } else if (event.event === "Progress") {
+            downloaded += event.data.chunkLength || 0;
+            const pct = total > 0 ? Math.min(100, Math.round((downloaded / total) * 100)) : 50;
+            updateStatusEl.textContent = (t("updateDownloading") || "Lade Update ({pct}%)...").replace("{pct}", String(pct));
+          } else if (event.event === "Finished") {
+            updateStatusEl.textContent = t("updateRestarting") || "Installiert! Starte neu...";
+          }
+        });
+        if (processApi?.relaunch) {
+          await processApi.relaunch();
+        }
+      });
+      return;
+    } catch (err) {
+      console.warn("Native updater fallback:", err);
+    }
+  }
+
+  // 2. Fallback: GitHub Releases API prüfen & im Browser öffnen
   try {
     const res = await fetch(
       "https://api.github.com/repos/PatrickBarbian/HeddleLab/releases/latest",
