@@ -1,6 +1,6 @@
 [package]
 name = "heddlelab"
-version = "0.3.6"
+version = "0.4.0"
 description = "Handweb-Studio für Gatterkamm- und Schaftwebstühle"
 authors = ["Patrick Barbian"]
 edition = "2021"

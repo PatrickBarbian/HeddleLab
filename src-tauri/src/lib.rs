@@ -18,6 +18,8 @@ pub fn run() {
             commands::save_project,
             commands::load_project,
             commands::delete_project,
+            commands::export_wif,
+            commands::import_wif,
         ])
         .run(tauri::generate_context!())
         .expect("Fehler beim Starten der Tauri-Anwendung");

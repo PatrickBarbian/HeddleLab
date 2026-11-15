@@ -97,7 +97,7 @@ export class WeavingEditor {
     const weftThicknesses = Array.from({ length: weftCount }, () => 1.0);
 
     return {
-      loomType: { kind: "RigidHeddle" },
+      loomType: { kind: "rigidHeddle" },
       warpColors,
       weftColors,
       warpThicknesses,
@@ -268,7 +268,7 @@ export class WeavingEditor {
 
     // Schaftwebstuhl: Einzug (Threading) klicken
     this.threadingCanvas.addEventListener("pointerdown", (e) => {
-      if (this.draft.loomType.kind !== "ShaftLoom") return;
+      if (!this.isShaftMode()) return;
       const rect = this.threadingCanvas.getBoundingClientRect();
       const x = Math.floor((e.clientX - rect.left) / this.cellSize);
       const row = Math.floor((e.clientY - rect.top) / this.cellSize);
@@ -283,7 +283,7 @@ export class WeavingEditor {
 
     // Schaftwebstuhl: Schnürung (Tie-up) klicken
     this.tieupCanvas.addEventListener("pointerdown", (e) => {
-      if (this.draft.loomType.kind !== "ShaftLoom") return;
+      if (!this.isShaftMode()) return;
       const rect = this.tieupCanvas.getBoundingClientRect();
       const treadle = Math.floor((e.clientX - rect.left) / this.cellSize);
       const row = Math.floor((e.clientY - rect.top) / this.cellSize);
@@ -299,7 +299,7 @@ export class WeavingEditor {
 
     // Schaftwebstuhl: Trittfolge (Treadling) klicken
     this.treadlingCanvas.addEventListener("pointerdown", (e) => {
-      if (this.draft.loomType.kind !== "ShaftLoom") return;
+      if (!this.isShaftMode()) return;
       const rect = this.treadlingCanvas.getBoundingClientRect();
       const treadle = Math.floor((e.clientX - rect.left) / this.cellSize);
       const y = Math.floor((e.clientY - rect.top) / this.cellSize);
@@ -320,18 +320,34 @@ export class WeavingEditor {
 
     this.shaftCountSelectEl.addEventListener("change", () => {
       const n = Number(this.shaftCountSelectEl.value) || 4;
-      this.setLoomMode("ShaftLoom", n, n);
+      this.setLoomMode("shaftLoom", n, n);
     });
   }
 
+  isShaftMode() {
+    const k = this.draft?.loomType?.kind;
+    return k === "shaftLoom" || k === "ShaftLoom";
+  }
+
+  ensureShaftOption(shafts) {
+    const val = String(shafts);
+    if (![...this.shaftCountSelectEl.options].some((o) => o.value === val)) {
+      const opt = document.createElement("option");
+      opt.value = val;
+      opt.textContent = `${shafts} Schäfte / ${shafts} Tritte`;
+      this.shaftCountSelectEl.appendChild(opt);
+    }
+    this.shaftCountSelectEl.value = val;
+  }
+
   setLoomMode(kind, shafts = 4, treadles = 4) {
-    const isShaft = kind === "ShaftLoom";
+    const isShaft = kind === "shaftLoom" || kind === "ShaftLoom";
     this.shaftToolbarEl.hidden = !isShaft;
     this.threadingRowEl.hidden = !isShaft;
     this.treadlingCanvas.hidden = !isShaft;
 
     if (!isShaft) {
-      this.draft.loomType = { kind: "RigidHeddle" };
+      this.draft.loomType = { kind: "rigidHeddle" };
       this.draft.threading = this.draft.warpColors.map((_, x) => x % 2);
       this.draft.treadling = this.draft.weftColors.map((_, y) => y % 2);
       this.draft.tieUp = [
@@ -344,14 +360,16 @@ export class WeavingEditor {
       return;
     }
 
-    this.draft.loomType = { kind: "ShaftLoom", shafts, treadles };
-    this.shaftCountSelectEl.value = String(shafts);
-    this.cornerBadgeEl.textContent = `${shafts}S`;
+    const safeShafts = Math.max(2, Math.min(16, Number(shafts) || 4));
+    const safeTreadles = Math.max(2, Math.min(16, Number(treadles) || safeShafts));
+    this.draft.loomType = { kind: "shaftLoom", shafts: safeShafts, treadles: safeTreadles };
+    this.ensureShaftOption(safeShafts);
+    this.cornerBadgeEl.textContent = `${safeShafts}S`;
     this.applyWeavePreset("twill22");
   }
 
   applyWeavePreset(preset) {
-    if (this.draft.loomType.kind !== "ShaftLoom") return;
+    if (!this.isShaftMode()) return;
     const shafts = this.draft.loomType.shafts;
     const treadles = this.draft.loomType.treadles;
     const warpLen = this.draft.warpColors.length;
@@ -461,8 +479,18 @@ export class WeavingEditor {
 
   loadDraft(draftData) {
     if (!draftData || !Array.isArray(draftData.warpColors)) return;
+    const rawKind = draftData.loomType?.kind;
+    const isShaft = rawKind === "shaftLoom" || rawKind === "ShaftLoom";
+    const normalizedLoomType = isShaft
+      ? {
+          kind: "shaftLoom",
+          shafts: Math.max(2, Math.min(16, Number(draftData.loomType?.shafts) || 4)),
+          treadles: Math.max(2, Math.min(16, Number(draftData.loomType?.treadles) || 4)),
+        }
+      : { kind: "rigidHeddle" };
+
     this.draft = {
-      loomType: draftData.loomType ?? { kind: "RigidHeddle" },
+      loomType: normalizedLoomType,
       warpColors: [...draftData.warpColors],
       weftColors: [...draftData.weftColors],
       warpThicknesses:
@@ -475,13 +503,12 @@ export class WeavingEditor {
       tieUp: (draftData.tieUp ?? [[true, false], [false, true]]).map((r) => [...r]),
       treadling: [...(draftData.treadling ?? [])],
     };
-    const isShaft = this.draft.loomType.kind === "ShaftLoom";
     this.shaftToolbarEl.hidden = !isShaft;
     this.threadingRowEl.hidden = !isShaft;
     this.treadlingCanvas.hidden = !isShaft;
     if (isShaft) {
-      this.shaftCountSelectEl.value = String(this.draft.loomType.shafts);
-      this.cornerBadgeEl.textContent = `${this.draft.loomType.shafts}S`;
+      this.ensureShaftOption(normalizedLoomType.shafts);
+      this.cornerBadgeEl.textContent = `${normalizedLoomType.shafts}S`;
     } else {
       this.cornerBadgeEl.textContent = "PW";
     }
@@ -618,7 +645,7 @@ export class WeavingEditor {
     }
 
     // 4. Schaftwebstuhl-Matrizen (Threading, Tie-up, Treadling)
-    if (this.draft.loomType.kind === "ShaftLoom") {
+    if (this.isShaftMode()) {
       this.renderShaftMatrices(warpCount, weftCount, s);
     }
   }

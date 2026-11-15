@@ -8,7 +8,9 @@ pub type ColorHex = String;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum LoomType {
+    #[serde(alias = "RigidHeddle")]
     RigidHeddle,
+    #[serde(alias = "ShaftLoom")]
     ShaftLoom { shafts: usize, treadles: usize },
 }
 

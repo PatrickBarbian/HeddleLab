@@ -4,6 +4,7 @@ use crate::domain::calculator::{self, WarpWeftInput, WarpWeftOutput};
 use crate::domain::draft::{ThreadingPlanStep, WeavingDraft};
 use crate::domain::profiles::{self, LoomProfile};
 use crate::domain::projects::{self, HeddleProject, ProjectSummary};
+use crate::domain::wif;
 
 #[tauri::command]
 pub fn calculate_warp_weft(input: WarpWeftInput) -> Result<WarpWeftOutput, String> {
@@ -119,4 +120,14 @@ pub fn delete_project(app: AppHandle, id: String) -> Result<(), String> {
         .app_data_dir()
         .map_err(|e| format!("App-Datenverzeichnis nicht gefunden: {e}"))?;
     projects::delete_project(&dir, &id)
+}
+
+#[tauri::command]
+pub fn export_wif(draft: WeavingDraft) -> String {
+    wif::export_wif(&draft)
+}
+
+#[tauri::command]
+pub fn import_wif(content: String) -> Result<WeavingDraft, String> {
+    wif::import_wif(&content)
 }

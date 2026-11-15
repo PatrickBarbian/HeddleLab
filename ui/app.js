@@ -44,11 +44,16 @@ const state = {
   lastCalculation: null,
   profiles: [],
   activeProfileId: null,
+  editingProfileId: null,
   loomMode: "RigidHeddle", // "RigidHeddle" | "ShaftLoom"
   currentProjectId: `proj-${Date.now()}`,
   threadingPlan: [],
   checkedSteps: new Set(),
 };
+
+function isShaftKind(kind) {
+  return kind === "shaftLoom" || kind === "ShaftLoom";
+}
 
 const navButtons = document.querySelectorAll(".nav-item");
 const views = document.querySelectorAll(".view");
@@ -149,35 +154,123 @@ function renderCalculation(output) {
   renderCalcHeddleSummary(output.totalWarpEnds);
 }
 
+function parseHeddlesInput(raw, shafts) {
+  const parts = String(raw || "")
+    .split(",")
+    .map((v) => parseInt(v.trim(), 10))
+    .filter((n) => Number.isFinite(n) && n > 0)
+    .slice(0, shafts);
+  while (parts.length < shafts) {
+    parts.push(parts[parts.length - 1] ?? 100);
+  }
+  return parts;
+}
+
+function getActiveProfile() {
+  return state.profiles.find((p) => p.id === state.activeProfileId) || null;
+}
+
 function getActiveHeddlesPerShaft() {
-  const active = state.profiles.find((p) => p.id === state.activeProfileId);
-  const shafts = editor.draft.loomType.kind === "ShaftLoom" ? editor.draft.loomType.shafts : 2;
+  const active = getActiveProfile();
+  const drawerOpen = !saveDrawer.hidden && state.loomMode === "ShaftLoom";
+  const shafts = drawerOpen
+    ? Math.max(2, Math.min(16, Number(document.getElementById("new-profile-shafts").value) || 4))
+    : isShaftKind(editor.draft.loomType?.kind)
+      ? editor.draft.loomType.shafts
+      : active?.loomType?.shafts || 4;
+  if (drawerOpen) {
+    return parseHeddlesInput(document.getElementById("new-profile-heddles").value, shafts);
+  }
   if (active?.heddlesPerShaft?.length) {
-    return Array.from({ length: shafts }, (_, i) => active.heddlesPerShaft[i] ?? active.heddlesPerShaft[0] ?? 100);
+    return Array.from(
+      { length: shafts },
+      (_, i) => active.heddlesPerShaft[i] ?? active.heddlesPerShaft[active.heddlesPerShaft.length - 1] ?? 100
+    );
   }
   return Array.from({ length: shafts }, () => 100);
 }
 
+function updateRigidHeddleCapacityPreview() {
+  const preview = document.getElementById("rh-capacity-preview");
+  if (!preview) return;
+  const maxWidthCm = Number(document.getElementById("new-profile-width")?.value) || 60;
+  const reedCount = Math.max(1, Math.min(3, Number(document.getElementById("new-profile-reed-count")?.value) || 1));
+  const endsPerCm = Number(inputs.endsPerCm.value) || 4;
+  const totalSlotsOrHolesPerReed = Math.round(maxWidthCm * endsPerCm);
+  const effectiveEpi = endsPerCm * reedCount;
+  preview.textContent = `${reedCount} Kamm/Kämme × max. ${maxWidthCm} cm (${endsPerCm * 10}/10) = bis ${totalSlotsOrHolesPerReed * reedCount} Fäden (${effectiveEpi}/cm max.)`;
+}
+
 function renderCalcHeddleSummary(totalWarpEnds) {
   const card = document.getElementById("calc-shaft-card");
+  const titleEl = document.getElementById("calc-shaft-card-title");
   const grid = document.getElementById("calc-heddle-summary");
+  const active = getActiveProfile();
+  const drawerOpen = !saveDrawer.hidden;
+
+  card.hidden = false;
+  grid.innerHTML = "";
+
   if (state.loomMode !== "ShaftLoom") {
-    card.hidden = true;
+    titleEl.textContent = "Kamm- & Ösen-Belegung (Gatterkamm)";
+    const maxWidthCm = drawerOpen
+      ? Number(document.getElementById("new-profile-width").value) || 60
+      : active?.maxWidthCm || 60;
+    const reedCount = drawerOpen
+      ? Math.max(1, Math.min(3, Number(document.getElementById("new-profile-reed-count").value) || 1))
+      : Math.max(1, Math.min(3, active?.reedCount || 1));
+    const singleReedEndsPerCm = Number(inputs.endsPerCm.value) || 4;
+    const maxCapacityPerReed = Math.round(maxWidthCm * singleReedEndsPerCm);
+    const totalCapacity = maxCapacityPerReed * reedCount;
+    const holesNeeded = Math.ceil(totalWarpEnds / 2);
+    const slotsNeeded = Math.floor(totalWarpEnds / 2);
+    const overCapacity = totalWarpEnds > totalCapacity;
+    const weavingWidth = state.lastCalculation?.weavingWidthCm ?? 0;
+    const overWidth = weavingWidth > maxWidthCm;
+
+    const pills = [
+      {
+        text: `${reedCount} Kamm/Kämme · Effektiv max. ${singleReedEndsPerCm * reedCount}/cm`,
+        over: false,
+      },
+      {
+        text: `Bedarf: ${totalWarpEnds} / ${totalCapacity} Fäden (~${holesNeeded} Löcher, ~${slotsNeeded} Schlitze)`,
+        over: overCapacity,
+      },
+      {
+        text: `Webbreite: ${formatNumber(weavingWidth, 1)} / ${maxWidthCm} cm max.`,
+        over: overWidth,
+      },
+    ];
+    pills.forEach((p) => {
+      const pill = document.createElement("span");
+      pill.className = `heddle-pill${p.over ? " over-limit" : ""}`;
+      pill.textContent = p.text;
+      grid.appendChild(pill);
+    });
     return;
   }
-  card.hidden = false;
+
+  titleEl.textContent = "Litzen- / Ösen-Bedarf (Schaftwebstuhl)";
   const limits = getActiveHeddlesPerShaft();
   const shafts = limits.length;
   const perShaftApprox = Math.ceil(totalWarpEnds / shafts);
+  const endsPerDent = drawerOpen
+    ? Math.max(1, Number(document.getElementById("new-profile-ends-per-dent").value) || 2)
+    : Math.max(1, active?.endsPerDent || 2);
 
-  grid.innerHTML = "";
   limits.forEach((limit, idx) => {
     const over = perShaftApprox > limit;
     const pill = document.createElement("span");
     pill.className = `heddle-pill${over ? " over-limit" : ""}`;
-    pill.textContent = `Schaft ${idx + 1}: ~${perShaftApprox} / ${limit} Ösen`;
+    pill.textContent = `Schaft ${idx + 1}: ~${perShaftApprox} / ${limit} Ösen${over ? " !" : ""}`;
     grid.appendChild(pill);
   });
+
+  const dentPill = document.createElement("span");
+  dentPill.className = "heddle-pill";
+  dentPill.textContent = `Riedblatt: ${endsPerDent} Fäden/Schlitz`;
+  grid.appendChild(dentPill);
 }
 
 function renderError(message) {
@@ -220,17 +313,24 @@ function renderProfileSelect() {
   deleteBtn.disabled = state.profiles.length <= 1;
 }
 
-function setGlobalLoomMode(kind, shafts = 4, treadles = 4) {
-  state.loomMode = kind;
+function syncModeUi(kind) {
+  const isShaft = isShaftKind(kind);
+  state.loomMode = isShaft ? "ShaftLoom" : "RigidHeddle";
   document.querySelectorAll(".mode-btn").forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.mode === kind);
+    btn.classList.toggle("active", btn.dataset.mode === state.loomMode);
   });
-  document.getElementById("new-profile-shaft-fields").hidden = kind !== "ShaftLoom";
-  document.getElementById("threading-shaft-usage-box").hidden = kind !== "ShaftLoom";
-  editor.setLoomMode(kind, shafts, treadles);
+  document.getElementById("new-profile-shaft-fields").hidden = !isShaft;
+  document.getElementById("new-profile-rh-fields").hidden = isShaft;
+  document.getElementById("threading-shaft-usage-box").hidden = !isShaft;
+}
+
+function setGlobalLoomMode(kind, shafts = 4, treadles = 4) {
+  syncModeUi(kind);
+  editor.setLoomMode(state.loomMode, shafts, treadles);
   if (state.lastCalculation) {
     renderCalcHeddleSummary(state.lastCalculation.totalWarpEnds);
   }
+  updateRigidHeddleCapacityPreview();
   refreshThreadingPlan();
 }
 
@@ -242,6 +342,27 @@ document.querySelectorAll(".mode-btn").forEach((btn) => {
   });
 });
 
+function populateProfileDrawer(profile, isEdit = false) {
+  state.editingProfileId = isEdit && profile ? profile.id : null;
+  document.getElementById("new-profile-name").value = isEdit && profile ? profile.name : "";
+  document.getElementById("new-profile-width").value = profile?.maxWidthCm ?? 60;
+  document.getElementById("new-profile-reed-count").value = String(profile?.reedCount ?? 1);
+  document.getElementById("new-profile-ends-per-dent").value = profile?.endsPerDent ?? 2;
+
+  const isShaft = isShaftKind(profile?.loomType?.kind) || state.loomMode === "ShaftLoom";
+  const shafts = profile?.loomType?.shafts ?? (Number(document.getElementById("editor-shaft-count").value) || 4);
+  const treadles = profile?.loomType?.treadles ?? shafts;
+  document.getElementById("new-profile-shafts").value = shafts;
+  document.getElementById("new-profile-treadles").value = treadles;
+  const heddles = profile?.heddlesPerShaft?.length
+    ? Array.from({ length: shafts }, (_, i) => profile.heddlesPerShaft[i] ?? profile.heddlesPerShaft[0] ?? 100)
+    : Array.from({ length: shafts }, () => 100);
+  document.getElementById("new-profile-heddles").value = heddles.join(", ");
+  document.getElementById("new-profile-shaft-fields").hidden = !isShaft;
+  document.getElementById("new-profile-rh-fields").hidden = isShaft;
+  updateRigidHeddleCapacityPreview();
+}
+
 function applyProfile(profile) {
   if (!profile) return;
   state.activeProfileId = profile.id;
@@ -252,7 +373,7 @@ function applyProfile(profile) {
   sidebarLoomName.textContent = profile.name;
   renderProfileSelect();
 
-  if (profile.loomType?.kind === "ShaftLoom") {
+  if (isShaftKind(profile.loomType?.kind)) {
     setGlobalLoomMode("ShaftLoom", profile.loomType.shafts, profile.loomType.treadles);
   } else {
     setGlobalLoomMode("RigidHeddle");
@@ -280,14 +401,52 @@ profileSelect.addEventListener("change", () => {
 });
 
 document.getElementById("btn-toggle-save-profile").addEventListener("click", () => {
-  saveDrawer.hidden = !saveDrawer.hidden;
-  if (!saveDrawer.hidden) {
+  const opening = saveDrawer.hidden;
+  saveDrawer.hidden = !opening;
+  if (opening) {
+    populateProfileDrawer(getActiveProfile(), false);
     document.getElementById("new-profile-name").focus();
+  }
+  if (state.lastCalculation) {
+    renderCalcHeddleSummary(state.lastCalculation.totalWarpEnds);
+  }
+});
+
+document.getElementById("btn-edit-profile").addEventListener("click", () => {
+  const active = getActiveProfile();
+  if (!active) return;
+  saveDrawer.hidden = false;
+  populateProfileDrawer(active, true);
+  document.getElementById("new-profile-name").focus();
+  if (state.lastCalculation) {
+    renderCalcHeddleSummary(state.lastCalculation.totalWarpEnds);
   }
 });
 
 document.getElementById("btn-cancel-save-profile").addEventListener("click", () => {
   saveDrawer.hidden = true;
+  state.editingProfileId = null;
+  if (state.lastCalculation) {
+    renderCalcHeddleSummary(state.lastCalculation.totalWarpEnds);
+  }
+});
+
+[
+  "new-profile-width",
+  "new-profile-reed-count",
+  "new-profile-shafts",
+  "new-profile-treadles",
+  "new-profile-ends-per-dent",
+  "new-profile-heddles",
+].forEach((id) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener("input", () => {
+    updateRigidHeddleCapacityPreview();
+    if (state.lastCalculation) {
+      renderCalcHeddleSummary(state.lastCalculation.totalWarpEnds);
+    }
+  });
 });
 
 document.getElementById("btn-confirm-save-profile").addEventListener("click", async () => {
@@ -301,34 +460,31 @@ document.getElementById("btn-confirm-save-profile").addEventListener("click", as
   }
 
   const isShaft = state.loomMode === "ShaftLoom";
-  const shafts = Number(document.getElementById("new-profile-shafts").value) || 4;
-  const treadles = Number(document.getElementById("new-profile-treadles").value) || 4;
+  const shafts = Math.max(2, Math.min(16, Number(document.getElementById("new-profile-shafts").value) || 4));
+  const treadles = Math.max(2, Math.min(16, Number(document.getElementById("new-profile-treadles").value) || 4));
+  const reedCount = Math.max(1, Math.min(3, Number(document.getElementById("new-profile-reed-count").value) || 1));
+  const endsPerDent = Math.max(1, Math.min(6, Number(document.getElementById("new-profile-ends-per-dent").value) || 2));
   const heddlesRaw = document.getElementById("new-profile-heddles").value;
-  const parsedHeddles = isShaft
-    ? heddlesRaw
-        .split(",")
-        .map((v) => Math.max(1, Number(v.trim()) || 100))
-        .slice(0, shafts)
-    : [];
-  while (isShaft && parsedHeddles.length < shafts) {
-    parsedHeddles.push(parsedHeddles[0] ?? 100);
-  }
+  const parsedHeddles = isShaft ? parseHeddlesInput(heddlesRaw, shafts) : [];
 
   const newProfile = {
-    id: `profile-${Date.now()}`,
+    id: state.editingProfileId || `profile-${Date.now()}`,
     name,
-    loomType: isShaft ? { kind: "ShaftLoom", shafts, treadles } : { kind: "RigidHeddle" },
+    loomType: isShaft ? { kind: "shaftLoom", shafts, treadles } : { kind: "rigidHeddle" },
     maxWidthCm,
     defaultEndsPerCm: Number(inputs.endsPerCm.value) || 4,
     defaultLoomWasteCm: Number(inputs.loomWasteCm.value) || 50,
     defaultTakeUpPercent: Number(inputs.takeUpPercent.value) || 10,
     defaultShrinkagePercent: Number(inputs.shrinkagePercent.value) || 10,
+    reedCount,
+    endsPerDent,
     heddlesPerShaft: parsedHeddles,
   };
 
   try {
     state.profiles = await invoke("save_loom_profile", { profile: newProfile });
     saveDrawer.hidden = true;
+    state.editingProfileId = null;
     document.getElementById("new-profile-name").value = "";
     applyProfile(newProfile);
   } catch (err) {
@@ -344,6 +500,43 @@ document.getElementById("btn-delete-profile").addEventListener("click", async ()
     applyProfile(state.profiles[0]);
   } catch (err) {
     renderError(typeof err === "string" ? err : "Profil konnte nicht gelöscht werden.");
+  }
+});
+
+// --- .wif Export & Import (Fiberworks PCW / WeavePoint / DB-WEAVE / iWeaveIt / Handweaving.net) ---
+document.getElementById("editor-export-wif").addEventListener("click", async () => {
+  if (!invoke) return;
+  try {
+    const wifText = await invoke("export_wif", { draft: editor.draft });
+    const blob = new Blob([wifText], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const baseName = (projectNameInput?.value.trim() || "webpatrone").replace(/[^\w\-äöüÄÖÜß]+/g, "_");
+    a.download = `${baseName}.wif`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    renderError(typeof err === "string" ? err : "WIF-Export fehlgeschlagen.");
+  }
+});
+
+document.getElementById("input-import-wif").addEventListener("change", async (e) => {
+  const file = e.target.files?.[0];
+  if (!file || !invoke) return;
+  try {
+    const text = await file.text();
+    const importedDraft = await invoke("import_wif", { content: text });
+    syncModeUi(importedDraft.loomType?.kind || "shaftLoom");
+    editor.loadDraft(importedDraft);
+    refreshThreadingPlan();
+    if (state.lastCalculation) {
+      renderCalcHeddleSummary(state.lastCalculation.totalWarpEnds);
+    }
+  } catch (err) {
+    alert(typeof err === "string" ? err : "Ungültige .wif Datei.");
+  } finally {
+    e.target.value = "";
   }
 });
 
@@ -557,15 +750,8 @@ function applyLoadedProject(project) {
   if (calc.shrinkagePercent != null) inputs.shrinkagePercent.value = calc.shrinkagePercent;
   if (calc.loomWasteCm != null) inputs.loomWasteCm.value = calc.loomWasteCm;
 
-  const isShaft = project.loomMode === "ShaftLoom" || project.draft?.loomType?.kind === "ShaftLoom";
-  const shafts = project.draft?.loomType?.shafts || 4;
-  const treadles = project.draft?.loomType?.treadles || 4;
-  state.loomMode = isShaft ? "ShaftLoom" : "RigidHeddle";
-  document.querySelectorAll(".mode-btn").forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.mode === state.loomMode);
-  });
-  document.getElementById("new-profile-shaft-fields").hidden = !isShaft;
-  document.getElementById("threading-shaft-usage-box").hidden = !isShaft;
+  const isShaft = project.loomMode === "ShaftLoom" || isShaftKind(project.draft?.loomType?.kind);
+  syncModeUi(isShaft ? "ShaftLoom" : "RigidHeddle");
 
   editor.loadDraft(project.draft);
   state.checkedSteps = new Set(project.checkedSteps || []);
@@ -672,7 +858,7 @@ document.getElementById("input-import-project").addEventListener("change", async
 });
 
 // --- GitHub Auto-Updater (Tauri v2 Plugin + Fallback) ---
-const APP_VERSION = "0.3.6";
+const APP_VERSION = "0.4.0";
 const updateBtn = document.getElementById("btn-check-updates");
 const updateStatusEl = document.getElementById("update-status");
 

@@ -16,38 +16,52 @@ pub struct LoomProfile {
     pub default_loom_waste_cm: f64,
     pub default_take_up_percent: f64,
     pub default_shrinkage_percent: f64,
+    /// Anzahl eingesetzter Gatterkämme (1, 2 oder 3 beim Webrahmen).
+    #[serde(default = "default_one")]
+    pub reed_count: usize,
+    /// Fäden pro Riedschlitz (beim Schaftwebstuhl-Webblatt, z. B. 1 oder 2).
+    #[serde(default = "default_one")]
+    pub ends_per_dent: usize,
     /// Anzahl verfügbarer Litzen (Ösen) pro Schaft (bei Gatterkamm leer).
     #[serde(default)]
     pub heddles_per_shaft: Vec<usize>,
 }
 
+fn default_one() -> usize {
+    1
+}
+
 pub fn default_profiles() -> Vec<LoomProfile> {
     vec![
         LoomProfile {
-            id: "ashford-rh-60".to_string(),
-            name: "Ashford Rigid Heddle 60 cm (40/10)".to_string(),
+            id: "rigid-heddle-60".to_string(),
+            name: "Gatterkamm-Rahmen 60 cm (40/10)".to_string(),
             loom_type: LoomType::RigidHeddle,
             max_width_cm: 60.0,
             default_ends_per_cm: 4.0,
             default_loom_waste_cm: 50.0,
             default_take_up_percent: 10.0,
             default_shrinkage_percent: 10.0,
+            reed_count: 1,
+            ends_per_dent: 1,
             heddles_per_shaft: vec![],
         },
         LoomProfile {
-            id: "ashford-sampleit-40".to_string(),
-            name: "Ashford SampleIt 40 cm (30/10)".to_string(),
+            id: "rigid-heddle-40".to_string(),
+            name: "Kompakt-Webrahmen 40 cm (30/10)".to_string(),
             loom_type: LoomType::RigidHeddle,
             max_width_cm: 40.0,
             default_ends_per_cm: 3.0,
             default_loom_waste_cm: 45.0,
             default_take_up_percent: 10.0,
             default_shrinkage_percent: 10.0,
+            reed_count: 1,
+            ends_per_dent: 1,
             heddles_per_shaft: vec![],
         },
         LoomProfile {
-            id: "ashford-table-4s-60".to_string(),
-            name: "Ashford Tischwebstuhl 60 cm (4 Schäfte)".to_string(),
+            id: "shaft-loom-4s-60".to_string(),
+            name: "Schaftwebstuhl 60 cm (4 Schäfte)".to_string(),
             loom_type: LoomType::ShaftLoom {
                 shafts: 4,
                 treadles: 4,
@@ -57,6 +71,8 @@ pub fn default_profiles() -> Vec<LoomProfile> {
             default_loom_waste_cm: 60.0,
             default_take_up_percent: 10.0,
             default_shrinkage_percent: 10.0,
+            reed_count: 1,
+            ends_per_dent: 2,
             heddles_per_shaft: vec![100, 100, 100, 100],
         },
     ]
@@ -140,6 +156,8 @@ mod tests {
             default_loom_waste_cm: 55.0,
             default_take_up_percent: 8.0,
             default_shrinkage_percent: 12.0,
+            reed_count: 1,
+            ends_per_dent: 1,
             heddles_per_shaft: vec![],
         };
 
