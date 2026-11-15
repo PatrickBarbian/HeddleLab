@@ -396,7 +396,7 @@ loadProfiles().then(() => {
 });
 
 // --- GitHub Update Checker ---
-const APP_VERSION = "0.2.0";
+const APP_VERSION = "0.2.1";
 const updateBtn = document.getElementById("btn-check-updates");
 const updateStatusEl = document.getElementById("update-status");
 
@@ -416,7 +416,7 @@ updateBtn.addEventListener("click", async () => {
 
   try {
     const res = await fetch(
-      "https://api.github.com/repos/PatrickBarbian/LoomCraft/releases/latest",
+      "https://api.github.com/repos/PatrickBarbian/HeddleLab/releases/latest",
       { headers: { Accept: "application/vnd.github+json" } }
     );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -429,6 +429,6 @@ updateBtn.addEventListener("click", async () => {
       updateStatusEl.textContent = t("updateUpToDate");
     }
   } catch {
-    updateStatusEl.innerHTML = `${t("updateError")} <a href="https://github.com/PatrickBarbian/LoomCraft/releases" target="_blank" rel="noopener">GitHub Releases</a>`;
+    updateStatusEl.innerHTML = `${t("updateError")} <a href="https://github.com/PatrickBarbian/HeddleLab/releases" target="_blank" rel="noopener">GitHub Releases</a>`;
   }
 });

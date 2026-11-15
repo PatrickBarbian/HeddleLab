@@ -1,12 +1,12 @@
 [package]
-name = "weben-planer"
-version = "0.2.0"
-description = "Handweb-Planer für Gatterkamm- und Schaftwebstühle"
-authors = ["Weben Planer"]
+name = "heddlelab"
+version = "0.2.1"
+description = "Handweb-Studio für Gatterkamm- und Schaftwebstühle"
+authors = ["Patrick Barbian"]
 edition = "2021"
 
 [lib]
-name = "weben_planer_lib"
+name = "heddlelab_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

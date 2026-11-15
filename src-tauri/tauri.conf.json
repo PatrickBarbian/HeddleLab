@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "LoomCraft",
-  "version": "0.2.0",
-  "identifier": "io.loomcraft.app",
+  "productName": "HeddleLab",
+  "version": "0.2.1",
+  "identifier": "io.heddlelab.app",
   "build": {
     "frontendDist": "../ui"
   },
@@ -10,7 +10,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "LoomCraft — Handweaving Studio",
+        "title": "HeddleLab — Handweaving Studio",
         "width": 1200,
         "height": 820,
         "minWidth": 900,

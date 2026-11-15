@@ -1,9 +1,9 @@
-# LoomCraft — Handweaving Studio
+# HeddleLab — Handweaving Studio
 
-[![GitHub Release](https://img.shields.io/github/v/release/PatrickBarbian/LoomCraft)](https://github.com/PatrickBarbian/LoomCraft/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/PatrickBarbian/HeddleLab)](https://github.com/PatrickBarbian/HeddleLab/releases)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-orange?logo=buy-me-a-coffee)](https://buymeacoffee.com/02eOWKzm5W)
 
-**LoomCraft** is a cross-platform desktop application (Windows & macOS) built with **Tauri v2** and **Rust** for handweavers. Designed for rigid heddle looms (such as Ashford Rigid Heddle & SampleIt) with an extensible weaving draft architecture ready for multi-shaft looms.
+**HeddleLab** is a cross-platform desktop application (Windows & macOS) built with **Tauri v2** and **Rust** for handweavers. Designed for rigid heddle looms (such as Ashford Rigid Heddle & SampleIt) with an extensible weaving draft architecture ready for multi-shaft looms.
 
 > **Suggested GitHub Description:**  
 > *Cross-platform desktop studio for handweavers — warp & weft calculator, interactive CAD weave editor with yarn thickness & material profiles, threading planner, and loom profiles (Tauri v2 + Rust).*
@@ -33,8 +33,8 @@
 
 ## Support
 
-If LoomCraft helps you plan your weaving projects, you can support development here:  
-☕ **[Buy Me a Coffee](https://buymeacoffee.com/02eOWKzm5W)** · 🔗 **[GitHub Repository](https://github.com/PatrickBarbian/LoomCraft)**
+If HeddleLab helps you plan your weaving projects, you can support development here:  
+☕ **[Buy Me a Coffee](https://buymeacoffee.com/02eOWKzm5W)** · 🔗 **[GitHub Repository](https://github.com/PatrickBarbian/HeddleLab)**
 
 ---
 
