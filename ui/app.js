@@ -672,7 +672,7 @@ document.getElementById("input-import-project").addEventListener("change", async
 });
 
 // --- GitHub Auto-Updater (Tauri v2 Plugin + Fallback) ---
-const APP_VERSION = "0.3.4";
+const APP_VERSION = "0.3.5";
 const updateBtn = document.getElementById("btn-check-updates");
 const updateStatusEl = document.getElementById("update-status");
 
