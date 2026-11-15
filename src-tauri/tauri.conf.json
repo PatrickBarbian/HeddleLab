@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "HeddleLab",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "identifier": "io.heddlelab.app",
   "build": {
     "frontendDist": "../ui"
@@ -32,7 +32,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "RWRctMTi1bdNPhxUD2Vo1fvoxJ6FiUStFVCSsykL0zCkDg1E5mH6y/UK",
+      "pubkey": "RWQ7UBoGJJKnzy4PVQWoEl3H31xkdFuvlcwNaBopJ9s22UIOuML4EtNu",
       "endpoints": [
         "https://github.com/PatrickBarbian/HeddleLab/releases/latest/download/latest.json"
       ]
